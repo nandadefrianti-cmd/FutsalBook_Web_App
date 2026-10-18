@@ -1,328 +1,471 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
-export default function JadwalPage({ onBookingClick }) {
+function JadwalPage({ onNavigate, user, onLogout }) {
   const [selectedCourt, setSelectedCourt] = useState('Lapangan A');
-  const [selectedSlot, setSelectedSlot] = useState({ jam: '19.00 - 20.00', harga: 'Rp150.000' });
+  const [selectedDate, setSelectedDate] = useState('2026-10-21');
+  const [selectedSlot, setSelectedSlot] = useState('19.00 - 20.00');
 
-  // Data detail tiap lapangan
-  const courtDetails = {
-    'Lapangan A': { type: 'VINYL', price: 'Rp150.000' },
-    'Lapangan B': { type: 'VINYL', price: 'Rp150.000' },
-    'Lapangan C': { type: 'RUMPUT SINTETIS', price: 'Rp120.000' },
+  // State untuk Kontrol Modal Peringatan Slot Terisi
+  const [showBookedModal, setShowBookedModal] = useState(false);
+  const [bookedSlotInfo, setBookedSlotInfo] = useState('');
+
+  // State & Ref untuk Pop-up Kalender Interaktif
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [viewDate, setViewDate] = useState(new Date(2026, 9, 1)); // Oktober 2026
+  const calendarRef = useRef(null);
+
+  // Tutup kalender jika klik di luar area
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (calendarRef.current && !calendarRef.current.contains(event.target)) {
+        setShowCalendar(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const changeMonth = (offset) => {
+    setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + offset, 1));
   };
 
-  const currentInfo = courtDetails[selectedCourt];
+  const formatMonthYear = (date) => {
+    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  };
+
+  const renderCalendarDays = () => {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    const firstDayOfMonth = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const days = [];
+
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      days.push(<div key={`empty-${i}`} className="h-8 w-8"></div>);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const formattedDayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const isSelected = selectedDate === formattedDayStr;
+
+      days.push(
+        <button
+          key={day}
+          type="button"
+          onClick={() => {
+            setSelectedDate(formattedDayStr);
+            setShowCalendar(false);
+          }}
+          className={`h-8 w-8 rounded-full text-xs font-semibold flex items-center justify-center transition ${
+            isSelected
+              ? 'bg-emerald-400 text-slate-950 font-bold shadow-lg shadow-emerald-400/30 scale-105'
+              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+          }`}
+        >
+          {day}
+        </button>
+      );
+    }
+    return days;
+  };
+
+  // Detail konfigurasi masing-masing lapangan
+  const courtDetails = {
+    'Lapangan A': {
+      type: 'VINYL',
+      image: 'https://i.pinimg.com/1200x/47/a1/35/47a135ace3bb63af9268b3dc450b5008.jpg',
+      weekdayPrice: 'Rp150.000',
+      weekendPrice: 'Rp180.000',
+    },
+    'Lapangan B': {
+      type: 'VINYL',
+      image: 'https://i.pinimg.com/1200x/6d/f5/88/6df588510bcc0faade4d9682b607dc76.jpg',
+      weekdayPrice: 'Rp150.000',
+      weekendPrice: 'Rp180.000',
+    },
+    'Lapangan C': {
+      type: 'RUMPUT SINTETIS',
+      image: 'https://i.pinimg.com/736x/15/35/24/153524e8c9cad4dadebb131012f90f2a.jpg',
+      weekdayPrice: 'Rp120.000',
+      weekendPrice: 'Rp150.000',
+    }
+  };
 
   const slots = [
-    { jam: '08.00 - 09.00', status: 'tersedia' },
-    { jam: '09.00 - 10.00', status: 'tersedia' },
-    { jam: '10.00 - 11.00', status: 'tersedia' },
-    { jam: '11.00 - 12.00', status: 'tersedia' },
-    { jam: '12.00 - 13.00', status: 'tersedia' },
-    { jam: '13.00 - 14.00', status: 'terisi' },
-    { jam: '14.00 - 15.00', status: 'tersedia' },
-    { jam: '15.00 - 16.00', status: 'tersedia' },
-    { jam: '16.00 - 17.00', status: 'tersedia' },
-    { jam: '17.00 - 18.00', status: 'tersedia' },
-    { jam: '18.00 - 19.00', status: 'tersedia' },
-    { jam: '19.00 - 20.00', status: 'dipilih' },
-    { jam: '20.00 - 21.00', status: 'tersedia' },
-    { jam: '21.00 - 22.00', status: 'tersedia' },
-    { jam: '22.00 - 23.00', status: 'tersedia' },
+    { time: '08.00 - 09.00', status: 'tersedia' },
+    { time: '09.00 - 10.00', status: 'tersedia' },
+    { time: '10.00 - 11.00', status: 'tersedia' },
+    { time: '11.00 - 12.00', status: 'tersedia' },
+    { time: '12.00 - 13.00', status: 'tersedia' },
+    { time: '13.00 - 14.00', status: 'terisi' },
+    { time: '14.00 - 15.00', status: 'tersedia' },
+    { time: '15.00 - 16.00', status: 'tersedia' },
+    { time: '16.00 - 17.00', status: 'tersedia' },
+    { time: '17.00 - 18.00', status: 'tersedia' },
+    { time: '18.00 - 19.00', status: 'tersedia' },
+    { time: '19.00 - 20.00', status: 'tersedia' },
+    { time: '20.00 - 21.00', status: 'tersedia' },
+    { time: '21.00 - 22.00', status: 'tersedia' },
+    { time: '22.00 - 23.00', status: 'tersedia' },
   ];
 
+  const currentCourt = courtDetails[selectedCourt];
+
+  const formatTanggalIndonesia = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('id-ID', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    }).format(date);
+  };
+
+  const isWeekend = (dateString) => {
+    const day = new Date(dateString).getDay();
+    return day === 0 || day === 6;
+  };
+
+  const activePrice = isWeekend(selectedDate) 
+    ? currentCourt.weekendPrice 
+    : currentCourt.weekdayPrice;
+
+  const handleSlotClick = (slot) => {
+    if (slot.status === 'terisi') {
+      setBookedSlotInfo(slot.time);
+      setShowBookedModal(true);
+    } else {
+      setSelectedSlot(slot.time);
+    }
+  };
+
+  const handleBooking = () => {
+    if (!selectedSlot) {
+      alert('Silakan pilih slot jam terlebih dahulu.');
+      return;
+    }
+    if (onNavigate) {
+      onNavigate('booking');
+    }
+  };
+
   return (
-    <div style={styles.container}>
-      <div style={styles.mainGrid}>
-        {/* Kolom Kiri: Banner, Tab Lapangan, Tanggal, & Slot Jam */}
-        <div style={styles.leftCol}>
-          {/* Banner Venue Utama */}
-          <div style={styles.venueBanner}>
-            <img
-              src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80"
-              alt="Arena"
-              style={styles.bannerImg}
-            />
-            <div style={styles.bannerOverlay}>
-              <h2 style={styles.venueTitle}>FutsalBook Arena</h2>
-              <p style={styles.venueAddress}>Jl. Contoh No. 1, Jakarta</p>
-              <span style={styles.jamOperasionalBadge}>Buka 08.00 – 23.00</span>
+    <div className="min-h-screen bg-[#070b19] text-white font-sans antialiased selection:bg-emerald-500 selection:text-slate-950 relative">
+      
+      {/* 1. Header Navigation */}
+      <header className="sticky top-0 z-40 bg-[#070b19]/90 backdrop-blur-md border-b border-slate-800/80">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <div 
+              className="flex items-center gap-2.5 cursor-pointer" 
+              onClick={() => onNavigate && onNavigate('home')}
+            >
+              <div className="w-8 h-8 rounded-lg bg-emerald-400 flex items-center justify-center font-bold text-slate-950 shadow-md shadow-emerald-400/20">
+                ⚽
+              </div>
+              <span className="font-extrabold text-lg tracking-tight text-white">
+                Futsal<span className="text-emerald-400">Book</span>
+              </span>
             </div>
+
+            <nav className="hidden md:flex items-center gap-1">
+              <button 
+                onClick={() => onNavigate && onNavigate('home')} 
+                className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/40 rounded-lg transition"
+              >
+                Beranda
+              </button>
+              <button 
+                onClick={() => onNavigate && onNavigate('jadwal')} 
+                className="px-4 py-2 text-sm font-semibold text-emerald-400 bg-slate-800/60 rounded-lg transition"
+              >
+                Jadwal Lapangan
+              </button>
+              <button 
+                onClick={() => onNavigate && onNavigate('booking')} 
+                className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/40 rounded-lg transition"
+              >
+                Booking Saya
+              </button>
+            </nav>
           </div>
 
-          {/* Tab Pilihan Lapangan & Badge Tipe Lantai */}
-          <div style={styles.courtTabsRow}>
-            <div style={styles.tabGroup}>
-              {['Lapangan A', 'Lapangan B', 'Lapangan C'].map((court) => (
-                <button
-                  key={court}
-                  style={{
-                    ...styles.courtTabBtn,
-                    ...(selectedCourt === court ? styles.activeCourtTab : {}),
-                  }}
-                  onClick={() => {
-                    setSelectedCourt(court);
-                    setSelectedSlot({ jam: '19.00 - 20.00', harga: courtDetails[court].price });
-                  }}
+          <div className="flex items-center gap-3">
+            {user ? (
+              <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl">
+                <div className="w-7 h-7 rounded-full bg-emerald-400/20 border border-emerald-400/50 flex items-center justify-center text-emerald-400 font-bold text-xs">
+                  {user.name ? user.name.charAt(0).toUpperCase() : 'S'}
+                </div>
+                <span className="text-xs font-semibold text-slate-200">{user.name || 'Salwa'}</span>
+                <span className="text-slate-600">|</span>
+                <button 
+                  onClick={onLogout}
+                  className="text-xs font-medium text-rose-400 hover:text-rose-300 transition"
                 >
-                  {court}
+                  Keluar
                 </button>
-              ))}
-            </div>
-            <span style={styles.vinylBadge}>{currentInfo.type}</span>
-          </div>
-
-          {/* Navigasi Tanggal */}
-          <div style={styles.dateNavigator}>
-            <button style={styles.arrowDateBtn}>❮</button>
-            <span style={styles.dateText}>📅 Rabu, 21 Okt 2026</span>
-            <button style={styles.arrowDateBtn}>❯</button>
-          </div>
-
-          {/* Grid Pilih Jam */}
-          <div style={styles.slotSection}>
-            <div style={styles.slotHeaderRow}>
-              <h4 style={styles.slotHeading}>Pilih Jam</h4>
-              <span style={styles.slotSubNote}>15 slot tersedia per hari</span>
-            </div>
-
-            <div style={styles.slotsGrid}>
-              {slots.map((s, idx) => {
-                const isSelected = selectedSlot.jam === s.jam;
-                let btnStyle = styles.slotTersedia;
-                if (s.status === 'terisi') btnStyle = styles.slotTerisi;
-                if (isSelected) btnStyle = styles.slotDipilih;
-
-                return (
-                  <button
-                    key={idx}
-                    style={{ ...styles.slotCard, ...btnStyle }}
-                    disabled={s.status === 'terisi'}
-                    onClick={() => setSelectedSlot({ jam: s.jam, harga: currentInfo.price })}
-                  >
-                    <span style={styles.slotTime}>{s.jam}</span>
-                    {s.status === 'terisi' && <span style={styles.terisiLabel}>TERISI</span>}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Keterangan Status Slot */}
-            <div style={styles.legendRow}>
-              <div style={styles.legendItem}>
-                <span style={{ ...styles.legendDot, backgroundColor: '#F7FEE7', border: '1px solid #BEF264' }}></span>
-                <span>Tersedia</span>
               </div>
-              <div style={styles.legendItem}>
-                <span style={{ ...styles.legendDot, backgroundColor: '#CBD5E1' }}></span>
-                <span>Terisi</span>
-              </div>
-              <div style={styles.legendItem}>
-                <span style={{ ...styles.legendDot, backgroundColor: '#07111E' }}></span>
-                <span>Dipilih</span>
-              </div>
-            </div>
+            ) : (
+              <button 
+                onClick={() => onNavigate && onNavigate('auth')}
+                className="px-5 py-2 text-sm font-semibold text-white bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-xl transition shadow-sm"
+              >
+                Masuk
+              </button>
+            )}
           </div>
         </div>
+      </header>
 
-        {/* Kolom Kanan: Harga & Ringkasan Booking */}
-        <div style={styles.rightCol}>
-          <div style={styles.cardBox}>
-            <h3 style={styles.cardBoxTitle}>Harga Lapangan</h3>
-            <div style={styles.priceRow}>
-              <span style={styles.priceKey}>Weekday (Sen - Jum)</span>
-              <span style={styles.priceVal}>Rp150.000 /jam</span>
+      {/* 2. Main Layout Container */}
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* LEFT SIDE: Court Info & Slot Grid */}
+          <div className="lg:col-span-8 space-y-6">
+            
+            {/* Court Hero Image */}
+            <div className="relative rounded-2xl overflow-hidden border border-slate-800 shadow-2xl h-64 md:h-72 bg-slate-900 group">
+              <img 
+                src={currentCourt.image} 
+                alt={selectedCourt} 
+                className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#070b19] via-[#070b19]/40 to-transparent"></div>
+              
+              <div className="absolute bottom-5 left-6 right-6 flex items-end justify-between">
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight mb-1">
+                    FutsalBook Arena
+                  </h1>
+                  <p className="text-xs md:text-sm text-slate-300 flex items-center gap-1.5">
+                    📍 Jl. Akses UI No. 45, Depok,
+                  </p>
+                </div>
+                <span className="px-3.5 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700 text-xs font-semibold text-emerald-400 shadow">
+                  Buka 08.00 – 23.00
+                </span>
+              </div>
             </div>
-            <div style={styles.priceRow}>
-              <span style={styles.priceKey}>Weekend (Sab - Min)</span>
-              <span style={styles.priceVal}>Rp180.000 /jam</span>
+
+            {/* Court Switcher Tabs */}
+            <div className="bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800 flex items-center justify-between gap-2 shadow-lg">
+              <div className="flex items-center gap-2 flex-1">
+                {['Lapangan A', 'Lapangan B', 'Lapangan C'].map((court) => (
+                  <button
+                    key={court}
+                    onClick={() => setSelectedCourt(court)}
+                    className={`flex-1 py-2.5 px-4 rounded-xl text-xs md:text-sm font-bold transition ${
+                      selectedCourt === court
+                        ? 'bg-slate-800 text-white border border-slate-700 shadow-md'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-950/40'
+                    }`}
+                  >
+                    {court}
+                  </button>
+                ))}
+              </div>
+              <span className="hidden sm:inline-block px-3 py-1.5 bg-slate-950 text-emerald-400 text-[11px] font-extrabold rounded-xl border border-slate-800 tracking-wider">
+                {currentCourt.type}
+              </span>
             </div>
+
+            {/* Date Selector Banner dengan Pop-up Kalender Interaktif */}
+            <div className="relative" ref={calendarRef}>
+              <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 flex items-center justify-between shadow-lg">
+                <button 
+                  type="button"
+                  onClick={() => {
+                    const d = new Date(selectedDate);
+                    d.setDate(d.getDate() - 1);
+                    setSelectedDate(d.toISOString().split('T')[0]);
+                  }}
+                  className="w-9 h-9 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-white hover:border-slate-700 transition"
+                >
+                  ‹
+                </button>
+
+                <div 
+                  onClick={() => setShowCalendar(!showCalendar)}
+                  className="flex items-center gap-2 font-bold text-sm md:text-base text-white cursor-pointer hover:text-emerald-400 transition"
+                >
+                  📅 <span>{formatTanggalIndonesia(selectedDate)}</span> ▾
+                </div>
+
+                <button 
+                  type="button"
+                  onClick={() => {
+                    const d = new Date(selectedDate);
+                    d.setDate(d.getDate() + 1);
+                    setSelectedDate(d.toISOString().split('T')[0]);
+                  }}
+                  className="w-9 h-9 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-white hover:border-slate-700 transition"
+                >
+                  ›
+                </button>
+              </div>
+
+              {/* POP-UP KALENDER MELAYANG */}
+              {showCalendar && (
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-[#0f172a] border border-slate-700/90 rounded-2xl p-4 shadow-2xl shadow-black/80 w-72 backdrop-blur-xl animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between mb-4 px-1">
+                    <button type="button" onClick={() => changeMonth(-1)} className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">‹</button>
+                    <span className="text-sm font-bold text-white tracking-wide">{formatMonthYear(viewDate)}</span>
+                    <button type="button" onClick={() => changeMonth(1)} className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">›</button>
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1 text-center mb-2">
+                    {['SUN', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].map((d) => (
+                      <span key={d} className="text-[10px] font-bold text-slate-400 uppercase">{d}</span>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1 justify-items-center">
+                    {renderCalendarDays()}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Slots Card Container */}
+            <div className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 shadow-2xl">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold text-white tracking-tight">Pilih Jam</h3>
+                <span className="text-xs text-slate-400 font-medium">15 slot tersedia per hari</span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+                {slots.map((slot, index) => {
+                  const isSelected = selectedSlot === slot.time;
+                  const isBooked = slot.status === 'terisi';
+
+                  return (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => handleSlotClick(slot)}
+                      className={`py-3 px-2 rounded-xl text-xs md:text-sm font-bold border transition duration-200 flex flex-col items-center justify-center gap-0.5 ${
+                        isBooked
+                          ? 'bg-slate-950/50 border-slate-900 text-slate-500 hover:border-rose-500/40 cursor-pointer'
+                          : isSelected
+                          ? 'bg-emerald-400 text-slate-950 border-emerald-400 shadow-lg shadow-emerald-400/20 ring-2 ring-emerald-400/50'
+                          : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-400'
+                      }`}
+                    >
+                      <span>{slot.time}</span>
+                      {isBooked && <span className="text-[10px] font-medium uppercase text-slate-500">TERISI</span>}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Legend Indicator */}
+              <div className="flex items-center gap-6 pt-4 border-t border-slate-800/80 text-xs font-semibold">
+                <div className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-md bg-emerald-500/20 border border-emerald-400"></span>
+                  <span className="text-slate-300">Tersedia</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-md bg-slate-950 border border-slate-900"></span>
+                  <span className="text-slate-500">Terisi</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-md bg-emerald-400"></span>
+                  <span className="text-slate-300">Dipilih</span>
+                </div>
+              </div>
+
+            </div>
+
           </div>
 
-          <div style={styles.cardBox}>
-            <h3 style={styles.cardBoxTitle}>Ringkasan Booking</h3>
-            <div style={styles.summaryRow}>
-              <span style={styles.summaryKey}>Lapangan</span>
-              <span style={styles.summaryValBold}>{selectedCourt}</span>
-            </div>
-            <div style={styles.summaryRow}>
-              <span style={styles.summaryKey}>Tanggal</span>
-              <span style={styles.summaryVal}>Rabu, 21 Okt 2026</span>
-            </div>
-            <div style={styles.summaryRow}>
-              <span style={styles.summaryKey}>Waktu</span>
-              <span style={styles.summaryVal}>{selectedSlot.jam} (1 jam)</span>
-            </div>
-
-            <hr style={styles.divider} />
-
-            <div style={styles.totalRow}>
-              <span style={styles.totalKey}>Total Harga</span>
-              <span style={styles.totalVal}>{selectedSlot.harga}</span>
+          {/* RIGHT SIDE: Pricing Card & Booking Summary */}
+          <div className="lg:col-span-4 space-y-6">
+            
+            <div className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
+              <h3 className="text-base font-bold text-white tracking-tight border-b border-slate-800 pb-3">
+                Harga Lapangan
+              </h3>
+              <div className="space-y-2.5 text-xs md:text-sm">
+                <div className="flex justify-between items-center text-slate-300">
+                  <span>Weekday (Sen - Jum)</span>
+                  <span className="font-bold text-white">{currentCourt.weekdayPrice} <span className="text-slate-400 font-normal">/jam</span></span>
+                </div>
+                <div className="flex justify-between items-center text-slate-300">
+                  <span>Weekend (Sab - Min)</span>
+                  <span className="font-bold text-white">{currentCourt.weekendPrice} <span className="text-slate-400 font-normal">/jam</span></span>
+                </div>
+              </div>
             </div>
 
-            <button style={styles.bookingBtn} onClick={onBookingClick}>
-              Booking Sekarang
+            <div className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 shadow-2xl space-y-6">
+              <h3 className="text-base font-bold text-white tracking-tight border-b border-slate-800 pb-3">
+                Ringkasan Booking
+              </h3>
+
+              <div className="space-y-3 text-xs md:text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Lapangan</span>
+                  <span className="font-bold text-white">{selectedCourt}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Tanggal</span>
+                  <span className="font-semibold text-slate-200">{formatTanggalIndonesia(selectedDate)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Waktu</span>
+                  <span className="font-semibold text-emerald-400">{selectedSlot ? `${selectedSlot} (1 jam)` : 'Belum dipilih'}</span>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-800 flex justify-between items-center">
+                <span className="text-sm text-slate-300 font-medium">Total Harga</span>
+                <span className="text-xl font-black text-emerald-400">
+                  {selectedSlot ? activePrice : 'Rp0'}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleBooking}
+                className="w-full py-3.5 bg-emerald-400 hover:bg-emerald-500 text-slate-950 font-extrabold rounded-xl transition shadow-lg shadow-emerald-400/20 text-sm tracking-wide"
+              >
+                Booking Sekarang
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+      </main>
+
+      {/* 3. MODAL PERINGATAN "SLOT SUDAH TERISI" */}
+      {showBookedModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#ffffff] text-slate-900 p-8 rounded-3xl w-full max-w-sm text-center shadow-2xl border border-slate-100 transform transition-all scale-100">
+            <div className="w-14 h-14 rounded-full bg-rose-100 border border-rose-200 flex items-center justify-center mx-auto mb-4 text-rose-500 text-2xl font-bold">
+              !
+            </div>
+            <h3 className="text-xl font-black text-slate-900 mb-2">
+              Slot sudah terisi
+            </h3>
+            <p className="text-slate-500 text-xs leading-relaxed mb-6">
+              Maaf, slot {bookedSlotInfo || '19.00 – 20.00'} di {selectedCourt} baru saja dipesan orang lain. Silakan pilih jam lain.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowBookedModal(false)}
+              className="w-full py-3 bg-[#0a1b3a] hover:bg-[#122b5c] text-white font-bold rounded-xl transition text-sm shadow-md"
+            >
+              Pilih Jam Lain
             </button>
           </div>
         </div>
-      </div>
+      )}
+
     </div>
   );
 }
 
-const styles = {
-  container: {
-    padding: '30px 48px',
-    backgroundColor: '#F8F9FA',
-    minHeight: '100vh',
-    fontFamily: 'sans-serif',
-  },
-  mainGrid: {
-    display: 'grid',
-    gridTemplateColumns: '2fr 1fr',
-    gap: '24px',
-    maxWidth: '1200px',
-    margin: '0 auto',
-  },
-  leftCol: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px',
-  },
-  venueBanner: {
-    position: 'relative',
-    height: '240px',
-    borderRadius: '12px',
-    overflow: 'hidden',
-  },
-  bannerImg: { width: '100%', height: '100%', objectFit: 'cover' },
-  bannerOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: '24px',
-    background: 'linear-gradient(to top, rgba(7,17,30,0.9), transparent)',
-    color: '#ffffff',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'flex-end',
-  },
-  venueTitle: { fontSize: '24px', fontWeight: '800', marginBottom: '2px' },
-  venueAddress: { fontSize: '13px', color: '#94A3B8', marginBottom: '10px' },
-  jamOperasionalBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    padding: '4px 12px',
-    borderRadius: '20px',
-    fontSize: '11px',
-    fontWeight: '600',
-  },
-  courtTabsRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    padding: '12px 16px',
-    borderRadius: '10px',
-    border: '1px solid #E2E8F0',
-  },
-  tabGroup: { display: 'flex', gap: '8px' },
-  courtTabBtn: {
-    padding: '8px 20px',
-    backgroundColor: 'transparent',
-    border: 'none',
-    borderRadius: '6px',
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#64748B',
-    cursor: 'pointer',
-  },
-  activeCourtTab: {
-    backgroundColor: '#07111E',
-    color: '#ffffff',
-  },
-  vinylBadge: {
-    fontSize: '11px',
-    fontWeight: '700',
-    color: '#0F172A',
-    backgroundColor: '#F1F5F9',
-    padding: '6px 12px',
-    borderRadius: '6px',
-  },
-  dateNavigator: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    padding: '12px 20px',
-    borderRadius: '10px',
-    border: '1px solid #E2E8F0',
-  },
-  arrowDateBtn: { background: 'none', border: 'none', fontSize: '14px', cursor: 'pointer', color: '#0F172A' },
-  dateText: { fontSize: '14px', fontWeight: '700', color: '#0F172A' },
-  slotSection: {
-    backgroundColor: '#ffffff',
-    padding: '24px',
-    borderRadius: '12px',
-    border: '1px solid #E2E8F0',
-  },
-  slotHeaderRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' },
-  slotHeading: { fontSize: '16px', fontWeight: '700', color: '#0F172A' },
-  slotSubNote: { fontSize: '12px', color: '#94A3B8' },
-  slotsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '12px',
-    marginBottom: '20px',
-  },
-  slotCard: {
-    padding: '14px',
-    borderRadius: '8px',
-    border: '1px solid #E2E8F0',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-  },
-  slotTersedia: { backgroundColor: '#F7FEE7', borderColor: '#BEF264' },
-  slotTerisi: { backgroundColor: '#E2E8F0', borderColor: '#CBD5E1', cursor: 'not-allowed', opacity: 0.7 },
-  slotDipilih: { backgroundColor: '#07111E', borderColor: '#07111E', color: '#ffffff' },
-  slotTime: { fontSize: '13px', fontWeight: '700' },
-  terisiLabel: { fontSize: '9px', fontWeight: '700', color: '#64748B', marginTop: '2px' },
-  legendRow: { display: 'flex', gap: '20px', fontSize: '12px', color: '#64748B', alignItems: 'center' },
-  legendItem: { display: 'flex', alignItems: 'center', gap: '6px' },
-  legendDot: { width: '10px', height: '10px', borderRadius: '50%' },
-  rightCol: { display: 'flex', flexDirection: 'column', gap: '20px' },
-  cardBox: {
-    backgroundColor: '#ffffff',
-    padding: '20px',
-    borderRadius: '12px',
-    border: '1px solid #E2E8F0',
-  },
-  cardBoxTitle: { fontSize: '15px', fontWeight: '700', color: '#0F172A', marginBottom: '14px' },
-  priceRow: { display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px', color: '#475569' },
-  priceKey: {},
-  priceVal: { fontWeight: '700', color: '#0F172A' },
-  summaryRow: { display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '10px', color: '#64748B' },
-  summaryKey: {},
-  summaryVal: { fontWeight: '600', color: '#0F172A' },
-  summaryValBold: { fontWeight: '700', color: '#0F172A' },
-  divider: { border: 'none', borderTop: '1px solid #E2E8F0', margin: '14px 0' },
-  totalRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' },
-  totalKey: { fontSize: '14px', fontWeight: '700', color: '#0F172A' },
-  totalVal: { fontSize: '18px', fontWeight: '800', color: '#0F172A' },
-  bookingBtn: {
-    width: '100%',
-    backgroundColor: '#A3E635',
-    color: '#064E3B',
-    border: 'none',
-    padding: '14px',
-    borderRadius: '8px',
-    fontWeight: '700',
-    fontSize: '14px',
-    cursor: 'pointer',
-  },
-};
+export default JadwalPage;

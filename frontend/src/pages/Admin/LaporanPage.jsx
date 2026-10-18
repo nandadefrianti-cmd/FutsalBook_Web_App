@@ -1,92 +1,125 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-export default function LaporanPage() {
-  const pendapatan = [
+function LaporanPage() {
+  const [selectedMonth, setSelectedMonth] = useState('Oktober 2026');
+
+  // Data Dummy Pendapatan per Lapangan
+  const revenueData = [
     { lapangan: 'Lapangan A', booking: 12, total: 'Rp1.800.000' },
     { lapangan: 'Lapangan B', booking: 9, total: 'Rp1.350.000' },
     { lapangan: 'Lapangan C', booking: 7, total: 'Rp840.000' },
   ];
 
-  const jamRamai = [
-    { jam: '19.00', count: 8 },
-    { jam: '20.00', count: 6 },
-    { jam: '18.00', count: 5 },
-    { jam: '16.00', count: 4 },
-    { jam: '17.00', count: 3 },
+  // Data Dummy Jam Paling Ramai
+  const busyHoursData = [
+    { jam: '19:00', booking: 8 },
+    { jam: '20:00', booking: 6 },
+    { jam: '18:00', booking: 5 },
+    { jam: '16:00', booking: 4 },
+    { jam: '17:00', booking: 3 },
   ];
 
   return (
-    <div>
-      <div style={styles.topHeader}>
+    <div className="space-y-6">
+      {/* Header Title & Month Picker */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 style={styles.pageTitle}>Laporan</h2>
-          <p style={styles.pageSub}>Ringkasan bulanan.</p>
+          <h1 className="text-3xl font-black text-[#0f244e] tracking-tight mb-1">
+            Laporan
+          </h1>
+          <p className="text-slate-500 text-sm">
+            Ringkasan bulanan.
+          </p>
         </div>
-        <div style={styles.dateSelector}>
-          <span>❮</span>
-          <span>📅 Oktober 2026</span>
-          <span>❯</span>
+
+        {/* Month Selector Filter */}
+        <div className="flex items-center bg-white px-3.5 py-2 rounded-2xl border border-slate-200/80 shadow-sm gap-3 self-start md:self-auto">
+          <button
+            type="button"
+            className="text-slate-400 hover:text-slate-700 px-1 font-bold text-lg transition"
+          >
+            ‹
+          </button>
+          <div className="flex items-center gap-2 font-bold text-sm text-[#0f244e]">
+            <span>📅</span>
+            <span>{selectedMonth}</span>
+            <span className="text-slate-400 text-xs">▾</span>
+          </div>
+          <button
+            type="button"
+            className="text-slate-400 hover:text-slate-700 px-1 font-bold text-lg transition"
+          >
+            ›
+          </button>
         </div>
       </div>
 
-      {/* Tabel 1: Pendapatan per Lapangan */}
-      <div style={styles.cardBox}>
-        <h3 style={styles.boxTitle}>Pendapatan per Lapangan</h3>
-        <table style={styles.table}>
-          <thead>
-            <tr style={styles.thRow}>
-              <th style={styles.th}>Lapangan</th>
-              <th style={styles.th}>Jumlah Booking</th>
-              <th style={{ ...styles.th, textAlign: 'right' }}>Total Pendapatan</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pendapatan.map((p, idx) => (
-              <tr key={idx} style={styles.trRow}>
-                <td style={styles.tdBold}>{p.lapangan}</td>
-                <td style={styles.td}>{p.booking}</td>
-                <td style={{ ...styles.tdBold, textAlign: 'right', color: '#0F172A' }}>{p.total}</td>
+      {/* 1. KARTU PENDAPATAN PER LAPANGAN */}
+      <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm space-y-4">
+        <h3 className="text-base font-bold text-[#0f244e]">
+          Pendapatan per Lapangan
+        </h3>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-[#f8fafc] text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <th className="py-3.5 px-6 rounded-l-xl">Lapangan</th>
+                <th className="py-3.5 px-6">Jumlah Booking</th>
+                <th className="py-3.5 px-6 text-right rounded-r-xl">Total Pendapatan</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-sm font-semibold text-slate-700">
+              {revenueData.map((item, idx) => (
+                <tr key={idx} className="hover:bg-slate-50/50 transition">
+                  <td className="py-4 px-6 font-bold text-[#0f244e]">
+                    {item.lapangan}
+                  </td>
+                  <td className="py-4 px-6 text-slate-600">
+                    {item.booking}
+                  </td>
+                  <td className="py-4 px-6 text-right font-black text-[#0f244e]">
+                    {item.total}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Tabel 2: Jam Paling Ramai */}
-      <div style={styles.cardBox}>
-        <h3 style={styles.boxTitle}>Jam Paling Ramai</h3>
-        <table style={styles.table}>
-          <thead>
-            <tr style={styles.thRow}>
-              <th style={styles.th}>Jam</th>
-              <th style={{ ...styles.th, textAlign: 'right' }}>Jumlah Booking</th>
-            </tr>
-          </thead>
-          <tbody>
-            {jamRamai.map((j, idx) => (
-              <tr key={idx} style={styles.trRow}>
-                <td style={styles.tdBold}>{j.jam}</td>
-                <td style={{ ...styles.tdBold, textAlign: 'right', color: '#0F172A' }}>{j.count}</td>
+      {/* 2. KARTU JAM PALING RAMAI */}
+      <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm space-y-4">
+        <h3 className="text-base font-bold text-[#0f244e]">
+          Jam Paling Ramai
+        </h3>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-[#f8fafc] text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <th className="py-3.5 px-6 rounded-l-xl">Jam</th>
+                <th className="py-3.5 px-6 text-right rounded-r-xl">Jumlah Booking</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-sm font-semibold text-slate-700">
+              {busyHoursData.map((item, idx) => (
+                <tr key={idx} className="hover:bg-slate-50/50 transition">
+                  <td className="py-4 px-6 font-bold text-[#0f244e]">
+                    {item.jam}
+                  </td>
+                  <td className="py-4 px-6 text-right font-black text-[#0f244e]">
+                    {item.booking}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
+
     </div>
   );
 }
 
-const styles = {
-  topHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
-  pageTitle: { fontSize: '24px', fontWeight: '800', color: '#0F172A', marginBottom: '4px' },
-  pageSub: { fontSize: '13px', color: '#64748B' },
-  dateSelector: { backgroundColor: '#ffffff', padding: '8px 16px', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', gap: '12px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
-  cardBox: { backgroundColor: '#ffffff', borderRadius: '12px', padding: '24px', border: '1px solid #E2E8F0', marginBottom: '24px' },
-  boxTitle: { fontSize: '16px', fontWeight: '700', color: '#0F172A', marginBottom: '16px' },
-  table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
-  thRow: { backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' },
-  th: { padding: '12px 16px', fontSize: '11px', fontWeight: '700', color: '#475569' },
-  trRow: { borderBottom: '1px solid #F1F5F9' },
-  td: { padding: '14px 16px', fontSize: '13px', color: '#475569' },
-  tdBold: { padding: '14px 16px', fontSize: '13px', fontWeight: '700', color: '#0F172A' },
-};
+export default LaporanPage;

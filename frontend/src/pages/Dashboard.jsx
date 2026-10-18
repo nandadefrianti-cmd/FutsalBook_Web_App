@@ -1,163 +1,101 @@
 import React, { useState } from 'react';
-import Navbar from '../components/Navbar';
-import ConfirmModal from '../components/ConfirmModal';
-import UploadModal from '../components/UploadModal';
-import JadwalPage from './JadwalPage';
-import BookingSayaPage from './BookingSayaPage';
-
-// Komponen Admin (Perbaikan jalur import dengan menambahkan ./ di depannya)
-import AdminSidebar from '../components/AdminSidebar';
 import JadwalHarianPage from './Admin/JadwalHarianPage';
 import KonfirmasiPembayaranPage from './Admin/KonfirmasiPembayaranPage';
 import LapanganTarifPage from './Admin/LapanganTarifPage';
 import LaporanPage from './Admin/LaporanPage';
-export default function Dashboard() {
-  // Ambil data user dari localStorage untuk cek role
-  const storedUser = JSON.parse(localStorage.getItem('user')) || { role: 'player' };
-  const isAdmin = storedUser.role === 'admin';
 
-  const [activeTab, setActiveTab] = useState(isAdmin ? 'jadwalHarian' : 'jadwal');
+function Dashboard({ user, onLogout }) {
+  const [activeMenu, setActiveMenu] = useState('jadwal'); // jadwal, konfirmasi, tarif, laporan
 
-  // Player States
-  const [venue, setVenue] = useState('Futsal Arena Ciputat');
-  const [court, setCourt] = useState('Lapangan 1');
-  const [date, setDate] = useState('2026-05-14');
-  const [selectedSlot, setSelectedSlot] = useState({ jam: '19:00 - 20:00', harga: 'Rp 150.000' });
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showUploadModal, setShowUploadModal] = useState(false);
-
-  // Data Dummy Slot & Booking
-  const slots = [
-    { jam: '08:00 - 09:00', harga: 'Rp 120.000', status: 'available' },
-    { jam: '09:00 - 10:00', harga: 'Rp 120.000', status: 'booked' },
-    { jam: '10:00 - 11:00', harga: 'Rp 120.000', status: 'available' },
-    { jam: '11:00 - 12:00', harga: 'Rp 120.000', status: 'available' },
-    { jam: '12:00 - 13:00', harga: 'Rp 120.000', status: 'booked' },
-    { jam: '13:00 - 14:00', harga: 'Rp 120.000', status: 'available' },
-    { jam: '14:00 - 15:00', harga: 'Rp 120.000', status: 'available' },
-    { jam: '15:00 - 16:00', harga: 'Rp 130.000', status: 'booked' },
-    { jam: '16:00 - 17:00', harga: 'Rp 130.000', status: 'available' },
-    { jam: '17:00 - 18:00', harga: 'Rp 130.000', status: 'available' },
-    { jam: '18:00 - 19:00', harga: 'Rp 150.000', status: 'available', tag: 'Ramai' },
-    { jam: '19:00 - 20:00', harga: 'Rp 150.000', status: 'available', tag: 'Ramai' },
-    { jam: '20:00 - 21:00', harga: 'Rp 150.000', status: 'booked', tag: 'Ramai' },
-    { jam: '21:00 - 22:00', harga: 'Rp 150.000', status: 'available', tag: 'Ramai' },
-    { jam: '22:00 - 23:00', harga: 'Rp 150.000', status: 'available', tag: 'Ramai' },
-  ];
-
-  const [myBookings, setMyBookings] = useState([
-    { id: 1, tanggal: '16 Mei 2026', jam: '19:00 - 20:00', lapangan: 'Lapangan 1', total: 'Rp 150.000', statusBooking: 'Menunggu', statusBayar: 'Belum bayar' },
-    { id: 2, tanggal: '18 Mei 2026', jam: '20:00 - 21:00', lapangan: 'Lapangan 2', total: 'Rp 150.000', statusBooking: 'Menunggu', statusBayar: 'Menunggu konfirmasi' },
-    { id: 3, tanggal: '20 Mei 2026', jam: '16:00 - 17:00', lapangan: 'Lapangan 1', total: 'Rp 130.000', statusBooking: 'Terkonfirmasi', statusBayar: 'Lunas' },
-  ]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.reload();
-  };
-
-  // Tampilan Khusus Admin dengan Layout Sidebar
-  if (isAdmin) {
-    return (
-      <div style={styles.adminLayout}>
-        <AdminSidebar
-          activeMenu={activeTab}
-          setActiveMenu={setActiveTab}
-          onLogout={handleLogout}
-        />
-        <main style={styles.adminMainContent}>
-          {activeTab === 'jadwalHarian' && <JadwalHarianPage />}
-          {activeTab === 'konfirmasiPembayaran' && <KonfirmasiPembayaranPage />}
-          {activeTab === 'lapanganTarif' && <LapanganTarifPage />}
-          {activeTab === 'laporan' && <LaporanPage />}
-        </main>
-      </div>
-    );
-  }
-
-  // Tampilan Player
   return (
-    <div style={styles.dashboardContainer}>
-      <Navbar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        onLogout={handleLogout}
-      />
+    <div className="min-h-screen bg-[#f3f6fb] text-slate-800 font-sans flex antialiased">
+      {/* Sidebar Kiri */}
+      <aside className="w-64 bg-[#071638] text-white flex flex-col justify-between p-4 shrink-0 border-r border-slate-800 min-h-screen">
+        <div>
+          <div className="flex items-center gap-2.5 px-3 py-4 mb-6">
+            <div className="w-8 h-8 rounded-lg bg-[#a3e635] text-slate-950 font-bold flex items-center justify-center shadow-md">
+              ⚽
+            </div>
+            <span className="font-black text-xl tracking-tight text-white">
+              Futsal<span className="text-[#a3e635]">Book</span>
+            </span>
+          </div>
 
-      <main style={styles.mainContent}>
-        {activeTab === 'jadwal' ? (
-          <JadwalPage
-            venue={venue}
-            setVenue={setVenue}
-            court={court}
-            setCourt={setCourt}
-            date={date}
-            setDate={setDate}
-            selectedSlot={selectedSlot}
-            setSelectedSlot={setSelectedSlot}
-            onBookingClick={() => setShowConfirmModal(true)}
-            slots={slots}
-          />
-        ) : (
-          <BookingSayaPage
-            bookings={myBookings}
-            onOpenUploadModal={() => setShowUploadModal(true)}
-          />
-        )}
+          <nav className="space-y-1.5">
+            <button
+              onClick={() => setActiveMenu('jadwal')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition ${
+                activeMenu === 'jadwal'
+                  ? 'bg-[#a3e635] text-slate-950 shadow-lg shadow-[#a3e635]/20'
+                  : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <span>📅</span> Jadwal Harian
+            </button>
+
+            <button
+              onClick={() => setActiveMenu('konfirmasi')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition ${
+                activeMenu === 'konfirmasi'
+                  ? 'bg-[#a3e635] text-slate-950 shadow-lg shadow-[#a3e635]/20 font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <span>💵</span> Konfirmasi Pembayaran
+            </button>
+
+            <button
+              onClick={() => setActiveMenu('tarif')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition ${
+                activeMenu === 'tarif'
+                  ? 'bg-[#a3e635] text-slate-950 shadow-lg shadow-[#a3e635]/20 font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <span>🏟️</span> Lapangan & Tarif
+            </button>
+
+            <button
+              onClick={() => setActiveMenu('laporan')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition ${
+                activeMenu === 'laporan'
+                  ? 'bg-[#a3e635] text-slate-950 shadow-lg shadow-[#a3e635]/20 font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <span>📊</span> Laporan
+            </button>
+          </nav>
+        </div>
+
+        {/* Profile Bottom */}
+        <div className="bg-[#0f244e] p-3 rounded-2xl flex items-center justify-between border border-slate-700/50">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 text-xs font-bold border border-slate-600">
+              👤
+            </div>
+            <span className="text-sm font-bold text-white">
+              {user?.name || 'Admin'}
+            </span>
+          </div>
+          <button
+            onClick={onLogout}
+            className="text-xs font-semibold text-slate-300 hover:text-rose-400 transition px-2 py-1"
+          >
+            Keluar
+          </button>
+        </div>
+      </aside>
+
+      {/* Konten Berdasarkan Menu Aktif */}
+      <main className="flex-1 p-8 md:p-10 overflow-y-auto">
+        {activeMenu === 'jadwal' && <JadwalHarianPage user={user} onLogout={onLogout} />}
+        {activeMenu === 'konfirmasi' && <KonfirmasiPembayaranPage user={user} />}
+        {activeMenu === 'tarif' && <LapanganTarifPage user={user} />}
+        {activeMenu === 'laporan' && <LaporanPage user={user} />}
       </main>
-
-      {showConfirmModal && (
-        <ConfirmModal
-          slot={selectedSlot}
-          court={court}
-          onConfirm={() => {
-            alert('Booking berhasil dibuat!');
-            setShowConfirmModal(false);
-            setActiveTab('bookingSaya');
-          }}
-          onClose={() => setShowConfirmModal(false)}
-        />
-      )}
-
-      {showUploadModal && (
-        <UploadModal
-          onSubmit={() => {
-            alert('Bukti bayar berhasil dikirim!');
-            setShowUploadModal(false);
-          }}
-          onClose={() => setShowUploadModal(false)}
-        />
-      )}
     </div>
   );
 }
 
-const styles = {
-  dashboardContainer: {
-    minHeight: '100vh',
-    width: '100vw',
-    backgroundColor: '#F8F7F2',
-    fontFamily: 'sans-serif',
-    boxSizing: 'border-box',
-  },
-  mainContent: {
-    maxWidth: '1100px',
-    margin: '32px auto',
-    padding: '0 20px',
-  },
-  adminLayout: {
-    display: 'flex',
-    minHeight: '100vh',
-    width: '100vw',
-    backgroundColor: '#F8F7F2',
-    fontFamily: 'sans-serif',
-    boxSizing: 'border-box',
-  },
-  adminMainContent: {
-    flex: 1,
-    padding: '40px',
-    boxSizing: 'border-box',
-    overflowY: 'auto',
-  },
-};
+export default Dashboard;

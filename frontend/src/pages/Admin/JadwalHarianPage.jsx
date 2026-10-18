@@ -1,110 +1,169 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-export default function JadwalHarianPage() {
-  const jadwalHariIni = [
-    { jam: '08.00 - 09.00', lapangan: 'Lapangan A', pemesan: 'Andi Pratama', status: 'Lunas' },
-    { jam: '10.00 - 11.00', lapangan: 'Lapangan B', pemesan: 'Budi Setiawan', status: 'Menunggu konfirmasi' },
-    { jam: '16.00 - 17.00', lapangan: 'Lapangan B', pemesan: 'Citra Lestari', status: 'Lunas' },
-    { jam: '19.00 - 20.00', lapangan: 'Lapangan A', pemesan: 'Dika Firmansyah', status: 'Belum bayar' },
-    { jam: '20.00 - 21.00', lapangan: 'Lapangan C', pemesan: 'Fajar Maulana', status: 'Menunggu konfirmasi' },
+function JadwalHarianPage({ user, onLogout }) {
+  const [selectedDate, setSelectedDate] = useState('2026-10-21');
+
+  // Data Dummy Booking Harian Presisi Sesuai Gambar
+  const dailyBookings = [
+    {
+      id: 1,
+      jam: '08.00 – 09.00',
+      lapangan: 'Lapangan A',
+      pemesan: 'Andi Pratama',
+      status: 'Lunas',
+    },
+    {
+      id: 2,
+      jam: '10.00 – 11.00',
+      lapangan: 'Lapangan B',
+      pemesan: 'Budi Setiawan',
+      status: 'Menunggu konfirmasi',
+    },
+    {
+      id: 3,
+      jam: '16.00 – 17.00',
+      lapangan: 'Lapangan B',
+      pemesan: 'Citra Lestari',
+      status: 'Lunas',
+    },
+    {
+      id: 4,
+      jam: '19.00 – 20.00',
+      lapangan: 'Lapangan A',
+      pemesan: 'Dika Firmansyah',
+      status: 'Belum bayar',
+    },
+    {
+      id: 5,
+      jam: '20.00 – 21.00',
+      lapangan: 'Lapangan C',
+      pemesan: 'Fajar Maulana',
+      status: 'Menunggu konfirmasi',
+    },
   ];
+
+  const formatTanggalIndonesia = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('id-ID', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).format(date);
+  };
+
+  const handleShiftDate = (days) => {
+    const currentDate = new Date(selectedDate);
+    currentDate.setDate(currentDate.getDate() + days);
+    setSelectedDate(currentDate.toISOString().split('T')[0]);
+  };
 
   return (
     <div>
-      <div style={styles.topHeader}>
+      {/* Header Title & Navigasi Tanggal */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
-          <h2 style={styles.pageTitle}>Jadwal Harian</h2>
-          <p style={styles.pageSub}>Daftar booking pada tanggal yang dipilih.</p>
+          <h1 className="text-3xl font-black text-[#0f244e] tracking-tight mb-1">
+            Jadwal Harian
+          </h1>
+          <p className="text-slate-500 text-sm">
+            Daftar booking pada tanggal yang dipilih.
+          </p>
         </div>
-        <div style={styles.dateSelector}>
-          <span>❮</span>
-          <span>📅 Rabu, 21 Okt 2026</span>
-          <span>❯</span>
+
+        {/* Filter Tanggal */}
+        <div className="flex items-center bg-white px-3.5 py-2 rounded-2xl border border-slate-200/80 shadow-sm gap-3">
+          <button
+            onClick={() => handleShiftDate(-1)}
+            className="text-slate-400 hover:text-slate-700 px-1 font-bold text-lg"
+          >
+            ‹
+          </button>
+          <div className="flex items-center gap-2 font-bold text-sm text-[#0f244e]">
+            <span>📅</span>
+            <span>{formatTanggalIndonesia(selectedDate)}</span>
+          </div>
+          <button
+            onClick={() => handleShiftDate(1)}
+            className="text-slate-400 hover:text-slate-700 px-1 font-bold text-lg"
+          >
+            ›
+          </button>
         </div>
       </div>
 
-      {/* Kartu Statistik Atas */}
-      <div style={styles.statsGrid}>
-        <div style={styles.statCard}>
-          <span style={styles.statLabel}>BOOKING HARI INI</span>
-          <h3 style={styles.statValue}>5</h3>
+      {/* Cards Summary Statistik */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            BOOKING HARI INI
+          </span>
+          <div className="text-4xl font-black text-[#0f244e]">5</div>
         </div>
-        <div style={styles.statCard}>
-          <span style={styles.statLabel}>MENUNGGU KONFIRMASI</span>
-          <h3 style={styles.statValue}>2</h3>
+
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            MENUNGGU KONFIRMASI
+          </span>
+          <div className="text-4xl font-black text-[#0f244e]">2</div>
         </div>
-        <div style={styles.statCard}>
-          <span style={styles.statLabel}>PENDAPATAN BULAN INI</span>
-          <h3 style={{ ...styles.statValue, color: '#0F172A' }}>Rp3.450.000</h3>
+
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            PENDAPATAN BULAN INI
+          </span>
+          <div className="text-3xl md:text-4xl font-black text-[#0f244e]">
+            Rp3.450.000
+          </div>
         </div>
       </div>
 
-      {/* Tabel Jadwal */}
-      <div style={styles.tableCard}>
-        <table style={styles.table}>
-          <thead>
-            <tr style={styles.thRow}>
-              <th style={styles.th}>JAM</th>
-              <th style={styles.th}>LAPANGAN</th>
-              <th style={styles.th}>PEMESAN</th>
-              <th style={styles.th}>STATUS PEMBAYARAN</th>
-            </tr>
-          </thead>
-          <tbody>
-            {jadwalHariIni.map((item, idx) => (
-              <tr key={idx} style={styles.trRow}>
-                <td style={styles.tdBold}>{item.jam}</td>
-                <td style={styles.td}>{item.lapangan}</td>
-                <td style={styles.td}>{item.pemesan}</td>
-                <td style={styles.td}>
-                  <span
-                    style={{
-                      ...styles.statusBadge,
-                      ...(item.status === 'Lunas' ? styles.badgeLunas : {}),
-                      ...(item.status === 'Belum bayar' ? styles.badgeBelum : {}),
-                      ...(item.status === 'Menunggu konfirmasi' ? styles.badgeMenunggu : {}),
-                    }}
-                  >
-                    {item.status}
-                  </span>
-                </td>
+      {/* Tabel Jadwal Harian */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden p-6">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-[#f3f6fb] text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <th className="py-3.5 px-6 rounded-l-xl">JAM</th>
+                <th className="py-3.5 px-6">LAPANGAN</th>
+                <th className="py-3.5 px-6">PEMESAN</th>
+                <th className="py-3.5 px-6 rounded-r-xl">STATUS PEMBAYARAN</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-sm font-semibold text-slate-700">
+              {dailyBookings.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50/60 transition">
+                  <td className="py-4 px-6 font-bold text-[#0f244e]">
+                    {item.jam}
+                  </td>
+                  <td className="py-4 px-6 text-slate-600">
+                    {item.lapangan}
+                  </td>
+                  <td className="py-4 px-6 text-slate-800 font-semibold">
+                    {item.pemesan}
+                  </td>
+                  <td className="py-4 px-6">
+                    <span
+                      className={`inline-block px-3.5 py-1 rounded-full text-xs font-bold ${
+                        item.status === 'Lunas'
+                          ? 'bg-[#a3e635] text-slate-950'
+                          : item.status === 'Menunggu konfirmasi'
+                          ? 'bg-[#fde68a] text-amber-900'
+                          : 'bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {item.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
 }
 
-const styles = {
-  topHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
-  pageTitle: { fontSize: '24px', fontWeight: '800', color: '#0F172A', marginBottom: '4px' },
-  pageSub: { fontSize: '13px', color: '#64748B' },
-  dateSelector: {
-    backgroundColor: '#ffffff',
-    padding: '8px 16px',
-    borderRadius: '8px',
-    border: '1px solid #E2E8F0',
-    display: 'flex',
-    gap: '12px',
-    fontSize: '13px',
-    fontWeight: '600',
-    cursor: 'pointer',
-  },
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '24px' },
-  statCard: { backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', border: '1px solid #E2E8F0' },
-  statLabel: { fontSize: '11px', fontWeight: '700', color: '#64748B', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' },
-  statValue: { fontSize: '32px', fontWeight: '800', color: '#0F172A' },
-  tableCard: { backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #E2E8F0', overflow: 'hidden' },
-  table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
-  thRow: { backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' },
-  th: { padding: '14px 20px', fontSize: '11px', fontWeight: '700', color: '#475569', letterSpacing: '0.5px' },
-  trRow: { borderBottom: '1px solid #F1F5F9' },
-  td: { padding: '16px 20px', fontSize: '13px', color: '#475569' },
-  tdBold: { padding: '16px 20px', fontSize: '13px', fontWeight: '700', color: '#0F172A' },
-  statusBadge: { padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', display: 'inline-block' },
-  badgeLunas: { backgroundColor: '#ECFDF5', color: '#059669' },
-  badgeBelum: { backgroundColor: '#FEF2F2', color: '#DC2626' },
-  badgeMenunggu: { backgroundColor: '#FEF3C7', color: '#D97706' },
-};
+export default JadwalHarianPage;

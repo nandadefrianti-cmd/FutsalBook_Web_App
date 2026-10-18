@@ -1,77 +1,179 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-export default function KonfirmasiPembayaranPage() {
-  const pendingPayments = [
-    { id: 1, pemesan: 'Budi Setiawan', lapangan: 'Lapangan B', waktu: '22 Okt 2026 - 10.00 - 11.00', total: 'Rp150.000' },
-    { id: 2, pemesan: 'Fajar Maulana', lapangan: 'Lapangan C', waktu: '21 Okt 2026 - 20.00 - 21.00', total: 'Rp120.000' },
-    { id: 3, pemesan: 'Gita Permata', lapangan: 'Lapangan A', waktu: '23 Okt 2026 - 18.00 - 19.00', total: 'Rp150.000' },
-  ];
+function KonfirmasiPembayaranPage() {
+  // Data Dummy Konfirmasi Pembayaran Presisi Sesuai Gambar
+  const [payments, setPayments] = useState([
+    {
+      id: 1,
+      pemesan: 'Budi Setiawan',
+      lapangan: 'Lapangan B',
+      tanggalJam: '22 Okt 2026 - 10.00 - 11.00',
+      total: 'Rp150.000',
+      buktiImg: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=600&auto=format&fit=crop',
+    },
+    {
+      id: 2,
+      pemesan: 'Fajar Maulana',
+      lapangan: 'Lapangan C',
+      tanggalJam: '21 Okt 2026 - 20.00 - 21.00',
+      total: 'Rp120.000',
+      buktiImg: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=600&auto=format&fit=crop',
+    },
+    {
+      id: 3,
+      pemesan: 'Gita Permata',
+      lapangan: 'Lapangan A',
+      tanggalJam: '23 Okt 2026 - 18.00 - 19.00',
+      total: 'Rp150.000',
+      buktiImg: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=600&auto=format&fit=crop',
+    },
+  ]);
+
+  // State untuk Modal Pratinjau Bukti Pembayaran
+  const [selectedBukti, setSelectedBukti] = useState(null);
+
+  // Aksi Konfirmasi Pembayaran oleh Admin
+  const handleKonfirmasi = (id, pemesan) => {
+    setPayments((prev) => prev.filter((item) => item.id !== id));
+    alert(`Pembayaran atas nama ${pemesan} telah berhasil dikonfirmasi!`);
+  };
 
   return (
     <div>
-      <div style={styles.topHeader}>
-        <h2 style={styles.pageTitle}>Konfirmasi Pembayaran</h2>
-        <p style={styles.pageSub}>Periksa bukti bayar lalu konfirmasi.</p>
+      {/* Header Title & Subtitle */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-black text-[#0f244e] tracking-tight mb-1">
+          Konfirmasi Pembayaran
+        </h1>
+        <p className="text-slate-500 text-sm">
+          Periksa bukti bayar lalu konfirmasi.
+        </p>
       </div>
 
-      <div style={styles.tableCard}>
-        <table style={styles.table}>
-          <thead>
-            <tr style={styles.thRow}>
-              <th style={styles.th}>PEMESAN</th>
-              <th style={styles.th}>LAPANGAN</th>
-              <th style={styles.th}>TANGGAL & JAM</th>
-              <th style={styles.th}>TOTAL</th>
-              <th style={styles.th}>BUKTI</th>
-              <th style={{ ...styles.th, textAlign: 'right' }}>AKSI</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pendingPayments.map((p) => (
-              <tr key={p.id} style={styles.trRow}>
-                <td style={styles.tdBold}>{p.pemesan}</td>
-                <td style={styles.td}>{p.lapangan}</td>
-                <td style={styles.td}>{p.waktu}</td>
-                <td style={styles.td}>{p.total}</td>
-                <td style={styles.td}>
-                  <span style={styles.linkBukti} onClick={() => alert('Membuka foto bukti transfer...')}>
-                    Lihat bukti ↗
-                  </span>
-                </td>
-                <td style={{ ...styles.td, textAlign: 'right' }}>
-                  <button style={styles.confirmBtn} onClick={() => alert('Pembayaran dikonfirmasi!')}>
-                    Konfirmasi
-                  </button>
-                </td>
+      {/* Card Table Container */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden p-6">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-[#f3f6fb] text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <th className="py-3.5 px-6 rounded-l-xl">PEMESAN</th>
+                <th className="py-3.5 px-6">LAPANGAN</th>
+                <th className="py-3.5 px-6">TANGGAL & JAM</th>
+                <th className="py-3.5 px-6">TOTAL</th>
+                <th className="py-3.5 px-6">BUKTI</th>
+                <th className="py-3.5 px-6 text-right rounded-r-xl">AKSI</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-sm font-semibold text-slate-700">
+              {payments.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50/60 transition">
+                  {/* Pemesan */}
+                  <td className="py-5 px-6 font-semibold text-slate-800">
+                    {item.pemesan}
+                  </td>
+
+                  {/* Lapangan */}
+                  <td className="py-5 px-6 text-slate-600">
+                    {item.lapangan}
+                  </td>
+
+                  {/* Tanggal & Jam */}
+                  <td className="py-5 px-6 text-slate-600">
+                    {item.tanggalJam}
+                  </td>
+
+                  {/* Total */}
+                  <td className="py-5 px-6 font-bold text-slate-900">
+                    {item.total}
+                  </td>
+
+                  {/* Bukti */}
+                  <td className="py-5 px-6">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedBukti(item)}
+                      className="text-xs font-semibold text-sky-600 hover:text-sky-800 underline inline-flex items-center gap-1 transition"
+                    >
+                      Lihat bukti <span>↗</span>
+                    </button>
+                  </td>
+
+                  {/* Aksi */}
+                  <td className="py-5 px-6 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleKonfirmasi(item.id, item.pemesan)}
+                      className="px-5 py-2 bg-[#a3e635] hover:bg-[#86efac] text-slate-950 font-bold text-xs rounded-xl transition shadow-sm"
+                    >
+                      Konfirmasi
+                    </button>
+                  </td>
+                </tr>
+              ))}
+
+              {/* Tampilan Jika Semua Pembayaran Sudah Dikonfirmasi */}
+              {payments.length === 0 && (
+                <tr>
+                  <td colSpan="6" className="py-12 text-center text-slate-400 font-medium">
+                    Semua pembayaran telah dikonfirmasi.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* Modal Pratinjau Foto Bukti Pembayaran */}
+      {selectedBukti && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-100">
+            <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-[#0f244e]">Bukti Transfer</h3>
+                <p className="text-xs text-slate-400">{selectedBukti.pemesan} • {selectedBukti.total}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedBukti(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 text-xs flex items-center justify-center transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 h-64 mb-5">
+              <img
+                src={selectedBukti.buktiImg}
+                alt="Bukti Transfer"
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setSelectedBukti(null)}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+              >
+                Tutup
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleKonfirmasi(selectedBukti.id, selectedBukti.pemesan);
+                  setSelectedBukti(null);
+                }}
+                className="flex-1 py-2.5 bg-[#a3e635] hover:bg-[#86efac] text-slate-950 font-bold text-xs rounded-xl transition shadow-sm"
+              >
+                Konfirmasi Lunas
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-const styles = {
-  topHeader: { marginBottom: '24px' },
-  pageTitle: { fontSize: '24px', fontWeight: '800', color: '#0F172A', marginBottom: '4px' },
-  pageSub: { fontSize: '13px', color: '#64748B' },
-  tableCard: { backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #E2E8F0', overflow: 'hidden' },
-  table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
-  thRow: { backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' },
-  th: { padding: '14px 20px', fontSize: '11px', fontWeight: '700', color: '#475569', letterSpacing: '0.5px' },
-  trRow: { borderBottom: '1px solid #F1F5F9' },
-  td: { padding: '16px 20px', fontSize: '13px', color: '#475569' },
-  tdBold: { padding: '16px 20px', fontSize: '13px', fontWeight: '700', color: '#0F172A' },
-  linkBukti: { color: '#0284C7', fontWeight: '600', cursor: 'pointer', textDecoration: 'underline' },
-  confirmBtn: {
-    backgroundColor: '#A3E635',
-    color: '#064E3B',
-    border: 'none',
-    padding: '8px 16px',
-    borderRadius: '6px',
-    fontWeight: '700',
-    fontSize: '12px',
-    cursor: 'pointer',
-  },
-};
+export default KonfirmasiPembayaranPage;

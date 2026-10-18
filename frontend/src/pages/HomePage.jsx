@@ -1,634 +1,475 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
-export default function HomePage({ onNavigate }) {
+function HomePage({ onNavigate }) {
   const [selectedLapangan, setSelectedLapangan] = useState('');
-  const [tanggal, setTanggal] = useState('2025-05-18');
+  const [selectedTanggal, setSelectedTanggal] = useState('2025-05-18');
+  
+  // State dan Ref untuk kontrol Pop-up Kalender
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [viewDate, setViewDate] = useState(new Date(2025, 4, 1)); // Mei 2025
+  const calendarRef = useRef(null);
 
-  const lapanganList = [
-    {
-      id: 1,
-      name: 'Lapangan A',
-      badge: 'Indoor Standard',
-      lantai: 'Vinyl',
-      price: 'Mulai Rp100.000/jam',
-      status: 'Tersedia',
-      image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=600&q=80',
-    },
-    {
-      id: 2,
-      name: 'Lapangan B',
-      badge: 'Turnamen Resmi',
-      lantai: 'Vinyl',
-      price: 'Mulai Rp100.000/jam',
-      status: 'Tersedia',
-      image: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=600&q=80',
-    },
-    {
-      id: 3,
-      name: 'Lapangan C',
-      badge: 'Non-Abrasive Turf',
-      lantai: 'Rumput Sintetis',
-      price: 'Mulai Rp80.000/jam',
-      status: 'Tersedia',
-      image: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=600&q=80',
-    },
-  ];
+  // Fungsi untuk menutup pop-up kalender jika mengeklik area luar
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (calendarRef.current && !calendarRef.current.contains(event.target)) {
+        setShowCalendar(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleCekJadwal = (e) => {
+    e.preventDefault();
+    if (onNavigate) onNavigate('jadwal');
+  };
+
+  // Helper format tanggal dari YYYY-MM-DD ke DD/MM/YYYY
+  const formatDateDisplay = (dateString) => {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+  };
+
+  const formatMonthYear = (date) => {
+    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  };
+
+  // Logika Generate Tanggal untuk Pop-up Kalender
+  const renderCalendarDays = () => {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+
+    const firstDayOfMonth = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const days = [];
+    
+    // Offset hari kosong
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      days.push(<div key={`empty-${i}`} className="h-8 w-8"></div>);
+    }
+
+    // List tanggal bulan ini
+    for (let day = 1; day <= daysInMonth; day++) {
+      const formattedDayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const isSelected = selectedTanggal === formattedDayStr;
+
+      days.push(
+        <button
+          key={day}
+          type="button"
+          onClick={() => {
+            setSelectedTanggal(formattedDayStr);
+            setShowCalendar(false);
+          }}
+          className={`h-8 w-8 rounded-full text-xs font-semibold flex items-center justify-center transition ${
+            isSelected
+              ? 'bg-emerald-400 text-slate-950 font-bold shadow-lg shadow-emerald-400/30 scale-105'
+              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+          }`}
+        >
+          {day}
+        </button>
+      );
+    }
+
+    return days;
+  };
+
+  const changeMonth = (offset) => {
+    setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + offset, 1));
+  };
 
   return (
-    <div style={styles.container}>
-      {/* 1. HEADER / NAVBAR */}
-      <header style={styles.navbar}>
-        <div style={styles.logoArea}>
-          <span style={styles.logoIcon}>⚽</span>
-          <span style={styles.logoText}>FutsalBook</span>
-        </div>
-        <nav style={styles.navLinks}>
-          <button style={{ ...styles.navLink, ...styles.activeNavLink }}>Beranda</button>
-          <button style={styles.navLink} onClick={() => onNavigate('jadwal')}>Jadwal Lapangan</button>
-        </nav>
-        <div style={styles.navRight}>
-          <button style={styles.loginBtn} onClick={() => onNavigate('auth')}>Masuk</button>
-          <button style={styles.profileIconBtn} onClick={() => onNavigate('auth')}>👤</button>
+    <div className="min-h-screen bg-[#070b19] text-white font-sans antialiased selection:bg-emerald-500 selection:text-slate-950">
+      
+      {/* 1. Navbar */}
+      <header className="sticky top-0 z-50 bg-[#070b19]/90 backdrop-blur-md border-b border-slate-800/80">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => onNavigate && onNavigate('home')}>
+              <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center font-bold text-slate-950 shadow-md shadow-emerald-500/20">
+                ⚽
+              </div>
+              <span className="font-extrabold text-lg tracking-tight text-white">
+                Futsal<span className="text-emerald-400">Book</span>
+              </span>
+            </div>
+            
+            <nav className="hidden md:flex items-center gap-1">
+              <button 
+                onClick={() => onNavigate && onNavigate('home')} 
+                className="px-4 py-2 text-sm font-semibold text-emerald-400 bg-slate-800/60 rounded-lg transition"
+              >
+                Beranda
+              </button>
+              <button 
+                onClick={() => onNavigate && onNavigate('jadwal')} 
+                className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/40 rounded-lg transition"
+              >
+                Jadwal Lapangan
+              </button>
+            </nav>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => onNavigate && onNavigate('auth')}
+              className="px-5 py-2 text-sm font-semibold text-white bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg transition shadow-sm"
+            >
+              Masuk
+            </button>
+            <button 
+              onClick={() => onNavigate && onNavigate('auth')}
+              className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700/80 flex items-center justify-center text-slate-300 hover:text-white transition"
+            >
+              👤
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* 2. HERO SECTION */}
-      <section style={styles.heroSection}>
-        <div style={styles.heroOverlay}>
-          <div style={styles.heroContent}>
-            <span style={styles.badgeResmi}>🛡️ SISTEM RESERVASI RESMI</span>
-            <h1 style={styles.heroTitle}>Booking Lapangan, <span style={styles.highlightText}>Gas Main!</span></h1>
-            <p style={styles.heroSubtitle}>
-              Lihat jadwal kosong dan pesan lapangan futsal tanpa chat sana-sini.
-            </p>
-            <div style={styles.heroActionBtns}>
-              <button style={styles.primaryActionBtn} onClick={() => onNavigate('jadwal')}>
-                📅 Lihat Jadwal
-              </button>
-              <button style={styles.secondaryActionBtn} onClick={() => onNavigate('auth')}>
-                Masuk ➔
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* 2. Hero Section dengan Background Banner */}
+      <section className="relative pt-12 pb-24 px-6 overflow-visible border-b border-slate-800/60">
+        <div className="absolute inset-0 z-0 opacity-25 bg-cover bg-center" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1920&auto=format&fit=crop')` }}></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-[#070b19]/60 via-[#070b19]/80 to-[#070b19] z-0"></div>
 
-        {/* Search / Filter Floating Box */}
-        <div style={styles.searchBox}>
-          <div style={styles.searchField}>
-            <label style={styles.searchLabel}>Lapangan</label>
-            <select
-              value={selectedLapangan}
-              onChange={(e) => setSelectedLapangan(e.target.value)}
-              style={styles.selectInput}
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold mb-6 shadow-sm">
+            <span>🛡️</span> SISTEM RESERVASI RESMI
+          </div>
+
+          <h1 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-4 leading-tight">
+            Booking Lapangan, <span className="text-emerald-400">Gas Main!</span>
+          </h1>
+          <p className="text-slate-300 text-base md:text-lg max-w-xl mx-auto mb-8 font-normal">
+            Lihat jadwal kosong dan pesan lapangan futsal tanpa chat sana-sini.
+          </p>
+
+          <div className="flex flex-wrap justify-center gap-4 mb-16">
+            <button 
+              onClick={() => onNavigate && onNavigate('jadwal')}
+              className="px-6 py-3 bg-emerald-400 hover:bg-emerald-500 text-slate-950 font-bold rounded-xl shadow-lg shadow-emerald-400/20 transition flex items-center gap-2 text-sm"
             >
-              <option value="">Pilih lapangan</option>
-              <option value="Lapangan A">Lapangan A</option>
-              <option value="Lapangan B">Lapangan B</option>
-              <option value="Lapangan C">Lapangan C</option>
-            </select>
+              <span>Lihat Jadwal</span> 
+            </button>
+            <button 
+              onClick={() => onNavigate && onNavigate('auth')}
+              className="px-6 py-3 bg-slate-800/80 hover:bg-slate-700 text-white font-semibold rounded-xl border border-slate-700 transition flex items-center gap-2 text-sm backdrop-blur-sm"
+            >
+              <span>Masuk</span> 
+            </button>
           </div>
-          <div style={styles.searchField}>
-            <label style={styles.searchLabel}>Tanggal</label>
-            <input
-              type="date"
-              value={tanggal}
-              onChange={(e) => setTanggal(e.target.value)}
-              style={styles.dateInput}
-            />
-          </div>
-          <button style={styles.searchBtn} onClick={() => onNavigate('jadwal')}>
-            🔍 Lihat Jadwal
-          </button>
-        </div>
-      </section>
-
-      {/* 3. LAPANGAN KAMI SECTION */}
-      <section style={styles.section}>
-        <div style={styles.sectionHeaderFlex}>
-          <div>
-            <h2 style={styles.sectionTitle}>Lapangan Kami</h2>
-            <p style={styles.sectionDesc}>Pilih lapangan dan lihat jadwalnya.</p>
-          </div>
-          <span style={styles.realtimeBadge}>🟢 Update Slot Real-Time</span>
         </div>
 
-        <div style={styles.lapanganGrid}>
-          {lapanganList.map((l) => (
-            <div key={l.id} style={styles.lapanganCard} onClick={() => onNavigate('jadwal')}>
-              <div style={styles.imageContainer}>
-                <img src={l.image} alt={l.name} style={styles.cardImage} />
-                <span style={styles.cardBadgeTop}>{l.badge}</span>
-                <span style={styles.tersediaBadge}>🟢 {l.status}</span>
+        {/* Floating Quick Filter Card */}
+        <div className="max-w-4xl mx-auto relative z-30" ref={calendarRef}>
+          <form onSubmit={handleCekJadwal} className="bg-slate-900/90 backdrop-blur-md p-4 md:p-5 rounded-2xl border border-slate-700/80 shadow-2xl grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+            
+            <div className="md:col-span-5">
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                Lapangan
+              </label>
+              <select
+                value={selectedLapangan}
+                onChange={(e) => setSelectedLapangan(e.target.value)}
+                className="w-full bg-slate-950 text-white border border-slate-700/80 rounded-xl px-3.5 py-3 text-sm focus:outline-none focus:border-emerald-500 transition"
+              >
+                <option value="">Pilih lapangan</option>
+                <option value="A">Lapangan A (Vinyl - Indoor Standard)</option>
+                <option value="B">Lapangan B (Vinyl - Turnamen Resmi)</option>
+                <option value="C">Lapangan C (Rumput Sintetis)</option>
+              </select>
+            </div>
+
+            {/* BARIS TANGGAL DENGAN AKSI KLIK PADA IKON & POPUP KALENDER */}
+            <div className="md:col-span-4 relative">
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                Tanggal
+              </label>
+
+              {/* Box Tanggal Interaktif */}
+              <div
+                onClick={() => setShowCalendar(!showCalendar)}
+                className="w-full bg-slate-950 text-white border border-slate-700/80 rounded-xl px-3.5 py-3 text-sm flex items-center justify-between cursor-pointer hover:border-emerald-500 transition"
+              >
+                <span>{formatDateDisplay(selectedTanggal)}</span>
+                <span className="text-slate-400 hover:text-emerald-400 transition text-base">📅</span>
               </div>
-              <div style={styles.cardBody}>
-                <h3 style={styles.cardTitle}>{l.name}</h3>
-                <p style={styles.cardLantai}>🔲 {l.lantai}</p>
-                <div style={styles.cardFooter}>
-                  <div>
-                    <span style={styles.tarifLabel}>TARIF SEWA</span>
-                    <p style={styles.tarifValue}>{l.price}</p>
+
+              {/* POP-UP KALENDER MELAYANG */}
+              {showCalendar && (
+                <div className="absolute top-full left-0 mt-2 z-50 bg-[#0f172a] border border-slate-700/90 rounded-2xl p-4 shadow-2xl shadow-black/80 w-72 backdrop-blur-xl animate-in fade-in duration-200">
+                  
+                  {/* Header Pop-up (Bulan & Navigasi Panah) */}
+                  <div className="flex items-center justify-between mb-4 px-1">
+                    <button
+                      type="button"
+                      onClick={() => changeMonth(-1)}
+                      className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+                    >
+                      ‹
+                    </button>
+                    <span className="text-sm font-bold text-white tracking-wide">
+                      {formatMonthYear(viewDate)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => changeMonth(1)}
+                      className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+                    >
+                      ›
+                    </button>
                   </div>
-                  <button style={styles.arrowBtn}>➔</button>
+
+                  {/* Header Nama Hari */}
+                  <div className="grid grid-cols-7 gap-1 text-center mb-2">
+                    {['SUN', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].map((d) => (
+                      <span key={d} className="text-[10px] font-bold text-slate-400 uppercase">
+                        {d}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Grid Tanggal */}
+                  <div className="grid grid-cols-7 gap-1 justify-items-center">
+                    {renderCalendarDays()}
+                  </div>
+
                 </div>
+              )}
+            </div>
+
+            <div className="md:col-span-3 flex items-end">
+              <button
+                type="submit"
+                className="w-full h-[46px] bg-emerald-400 hover:bg-emerald-500 text-slate-950 font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-400/20 text-sm mt-auto"
+              >
+                <span>🔍</span> Lihat Jadwal
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </section>
+
+      {/* 3. Section: Lapangan Kami */}
+      <section className="max-w-7xl mx-auto px-6 py-20">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+          <div>
+            <h2 className="text-3xl font-bold text-white tracking-tight mb-1">Lapangan Kami</h2>
+            <p className="text-slate-400 text-sm">Pilih lapangan dan lihat jadwalnya.</p>
+          </div>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700 text-xs font-medium text-slate-300">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            Update Slot Real-Time
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          {/* Card Lapangan A */}
+          <div className="bg-slate-900/80 rounded-2xl border border-slate-800 overflow-hidden hover:border-slate-700 transition flex flex-col group shadow-lg">
+            <div className="relative h-52 overflow-hidden bg-slate-950">
+              <img 
+                src="https://i.pinimg.com/1200x/47/a1/35/47a135ace3bb63af9268b3dc450b5008.jpg" 
+                alt="Lapangan A" 
+                className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+              />
+              <div className="absolute top-3 right-3 bg-emerald-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-full shadow">
+                ● Tersedia
+              </div>
+              <div className="absolute bottom-3 left-3 bg-slate-950/80 backdrop-blur-md text-emerald-400 text-xs font-semibold px-3 py-1 rounded-lg border border-slate-800">
+                ⚡ Indoor Standard
               </div>
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* 4. CARA BOOKING SECTION */}
-      <section style={styles.caraBookingSection}>
-        <div style={styles.centerHeader}>
-          <span style={styles.smallSubtitle}> KEMUDAHAN RESERVASI</span>
-          <h2 style={styles.sectionTitle}>Cara Booking</h2>
-          <p style={styles.sectionDesc}>Tiga langkah praktis untuk mengamankan jadwal tanding tim Anda.</p>
-        </div>
-
-        <div style={styles.stepGrid}>
-          <div style={styles.stepCard}>
-            <div style={styles.stepNumber}>1</div>
-            <h4 style={styles.stepTitle}>1. Pilih slot</h4>
-            <p style={styles.stepDesc}>Pilih lapangan, tanggal, dan jam kosong.</p>
-            <span style={styles.stepFooterNote}>🟢 Cek ketersediaan instan</span>
-          </div>
-
-          <div style={styles.stepCard}>
-            <div style={styles.stepNumber}>2</div>
-            <h4 style={styles.stepTitle}>2. Upload bukti bayar</h4>
-            <p style={styles.stepDesc}>Transfer lalu unggah bukti pembayaranmu.</p>
-            <span style={styles.stepFooterNote}>💳 QRIS & Transfer Bank</span>
-          </div>
-
-          <div style={styles.stepCard}>
-            <div style={styles.stepNumber}>3</div>
-            <h4 style={styles.stepTitle}>3. Tunggu konfirmasi</h4>
-            <p style={styles.stepDesc}>Admin mengonfirmasi dan slotmu aman.</p>
-            <span style={styles.stepFooterNote}>⏱️ Konfirmasi cepat &lt; 15 menit</span>
-          </div>
-        </div>
-      </section>
-
-      {/* 5. BANNER BAWAH (Fasilitas Standar FIFA) */}
-      <section style={styles.bottomBannerSection}>
-        <div style={styles.bottomBannerContent}>
-          <div style={styles.bannerInfo}>
-            <span style={styles.bannerIcon}>⚽</span>
-            <div>
-              <h4 style={styles.bannerTitle}>Fasilitas Lengkap & Standar FIFA</h4>
-              <p style={styles.bannerDesc}>Kamar bilas air hangat, ruang ganti ber-AC, kantin, dan tribun penonton nyaman.</p>
+            <div className="p-6 flex flex-col flex-grow justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-white mb-1">Lapangan A</h3>
+                <p className="text-xs text-slate-400 mb-6">🔹 Vinyl</p>
+              </div>
+              <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between">
+                <div>
+                  <span className="block text-[10px] uppercase font-semibold text-slate-400">Tarif Sewa</span>
+                  <span className="text-sm font-bold text-emerald-400">Mulai Rp100.000<span className="text-xs font-normal text-slate-400">/jam</span></span>
+                </div>
+                <button 
+                  onClick={() => onNavigate && onNavigate('jadwal')}
+                  className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-200 hover:text-white transition"
+                >
+                  ➡️
+                </button>
+              </div>
             </div>
           </div>
-          <button style={styles.pesanSekarangBtn} onClick={() => onNavigate('jadwal')}>
+
+          {/* Card Lapangan B */}
+          <div className="bg-slate-900/80 rounded-2xl border border-slate-800 overflow-hidden hover:border-slate-700 transition flex flex-col group shadow-lg">
+            <div className="relative h-52 overflow-hidden bg-slate-950">
+              <img 
+                src="https://i.pinimg.com/1200x/81/b6/3b/81b63bd45899d3951ce49dfbe95262ba.jpg" 
+                alt="Lapangan B" 
+                className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+              />
+              <div className="absolute top-3 right-3 bg-emerald-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-full shadow">
+                ● Tersedia
+              </div>
+              <div className="absolute bottom-3 left-3 bg-slate-950/80 backdrop-blur-md text-emerald-400 text-xs font-semibold px-3 py-1 rounded-lg border border-slate-800">
+                🏆 Turnamen Resmi
+              </div>
+            </div>
+            <div className="p-6 flex flex-col flex-grow justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-white mb-1">Lapangan B</h3>
+                <p className="text-xs text-slate-400 mb-6">🔹 Vinyl</p>
+              </div>
+              <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between">
+                <div>
+                  <span className="block text-[10px] uppercase font-semibold text-slate-400">Tarif Sewa</span>
+                  <span className="text-sm font-bold text-emerald-400">Mulai Rp100.000<span className="text-xs font-normal text-slate-400">/jam</span></span>
+                </div>
+                <button 
+                  onClick={() => onNavigate && onNavigate('jadwal')}
+                  className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-200 hover:text-white transition"
+                >
+                  ➡️
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Card Lapangan C */}
+          <div className="bg-slate-900/80 rounded-2xl border border-slate-800 overflow-hidden hover:border-slate-700 transition flex flex-col group shadow-lg">
+            <div className="relative h-52 overflow-hidden bg-slate-950">
+              <img 
+                src="https://i.pinimg.com/1200x/ad/03/65/ad03659eed8b847cf1b46679c7bfe8d3.jpg" 
+                alt="Lapangan C" 
+                className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+              />
+              <div className="absolute top-3 right-3 bg-emerald-500 text-slate-950 text-xs font-bold px-2.5 py-1 rounded-full shadow">
+                ● Tersedia
+              </div>
+              <div className="absolute bottom-3 left-3 bg-slate-950/80 backdrop-blur-md text-emerald-400 text-xs font-semibold px-3 py-1 rounded-lg border border-slate-800">
+                🌿 Rumput Sintetis
+              </div>
+            </div>
+            <div className="p-6 flex flex-col flex-grow justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-white mb-1">Lapangan C</h3>
+                <p className="text-xs text-slate-400 mb-6">🌿 Rumput Sintetis</p>
+              </div>
+              <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between">
+                <div>
+                  <span className="block text-[10px] uppercase font-semibold text-slate-400">Tarif Sewa</span>
+                  <span className="text-sm font-bold text-emerald-400">Mulai Rp80.000<span className="text-xs font-normal text-slate-400">/jam</span></span>
+                </div>
+                <button 
+                  onClick={() => onNavigate && onNavigate('jadwal')}
+                  className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-200 hover:text-white transition"
+                >
+                  ➡️
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* 4. Section: Cara Booking */}
+      <section className="max-w-7xl mx-auto px-6 py-20 border-t border-slate-800/60">
+        <div className="text-center max-w-2xl mx-auto mb-16">
+          <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest block mb-2">Kemudahan Reservasi</span>
+          <h2 className="text-3xl font-bold text-white tracking-tight mb-3">Cara Booking</h2>
+          <p className="text-slate-400 text-sm">Tiga langkah praktis untuk mengamankan jadwal tanding tim Anda.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          
+          {/* Step 1 */}
+          <div className="bg-slate-900/60 p-8 rounded-2xl border border-slate-800 relative flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-400 text-slate-950 font-black text-lg flex items-center justify-center mb-6 shadow-md shadow-emerald-400/20">
+                1
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">1. Pilih slot</h3>
+              <p className="text-sm text-slate-400 leading-relaxed mb-6">Pilih lapangan, tanggal, dan jam kosong.</p>
+            </div>
+            <div className="pt-4 border-t border-slate-800/80 flex items-center gap-2 text-xs text-emerald-400 font-medium">
+              <span>⚡</span> Cek ketersediaan instan
+            </div>
+          </div>
+
+          {/* Step 2 */}
+          <div className="bg-slate-900/60 p-8 rounded-2xl border border-slate-800 relative flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-400 text-slate-950 font-black text-lg flex items-center justify-center mb-6 shadow-md shadow-emerald-400/20">
+                2
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">2. Upload bukti bayar</h3>
+              <p className="text-sm text-slate-400 leading-relaxed mb-6">Transfer lalu unggah bukti pembayaranmu.</p>
+            </div>
+            <div className="pt-4 border-t border-slate-800/80 flex items-center gap-2 text-xs text-emerald-400 font-medium">
+              <span>💳</span> QRIS & Transfer Bank
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div className="bg-slate-900/60 p-8 rounded-2xl border border-slate-800 relative flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-400 text-slate-950 font-black text-lg flex items-center justify-center mb-6 shadow-md shadow-emerald-400/20">
+                3
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">3. Tunggu konfirmasi</h3>
+              <p className="text-sm text-slate-400 leading-relaxed mb-6">Admin mengonfirmasi dan slotmu aman.</p>
+            </div>
+            <div className="pt-4 border-t border-slate-800/80 flex items-center gap-2 text-xs text-emerald-400 font-medium">
+              <span>✅</span> Konfirmasi cepat &lt; 15 menit
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* 5. CTA Banner Bawah */}
+      <section className="max-w-7xl mx-auto px-6 py-12">
+        <div className="bg-gradient-to-r from-slate-900 via-[#0a1228] to-slate-900 border border-slate-800 rounded-2xl p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
+          <div className="flex items-center gap-5">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-400/10 border border-emerald-400/30 flex items-center justify-center text-emerald-400 text-2xl shrink-0">
+              ⚽
+            </div>
+            <div>
+              <h3 className="text-lg md:text-xl font-bold text-white mb-1">Fasilitas Lengkap & Standar FIFA</h3>
+              <p className="text-slate-400 text-xs md:text-sm">Kamar bilas air hangat, ruang ganti ber-AC, kantin, dan tribun penonton nyaman.</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => onNavigate && onNavigate('jadwal')}
+            className="px-6 py-3 bg-emerald-400 hover:bg-emerald-500 text-slate-950 font-bold rounded-xl transition shadow-lg shadow-emerald-400/20 text-sm shrink-0"
+          >
             Pesan Sekarang
           </button>
         </div>
       </section>
 
-      {/* 6. FOOTER */}
-      <footer style={styles.footer}>
-        <p style={styles.footerText}>⚽ FutsalBook Arena – Jl. Contoh No. 1, Jakarta – Buka 08.00 – 23.00</p>
-        <p style={styles.footerCopy}>© 2025 FutsalBook. All rights reserved.</p>
+      {/* 6. Footer */}
+      <footer className="border-t border-slate-800/80 bg-slate-950/60 mt-12 py-6 px-6 text-xs text-slate-400">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded bg-emerald-400 flex items-center justify-center text-slate-950 font-bold text-[10px]">⚽</span>
+            <span className="text-slate-300 font-medium">FutsalBook Arena</span>
+            <span>– Jl. Akses UI No. 45, Depok, – Buka 08.00 - 23.00</span>
+          </div>
+          <div>
+            © 2025 FutsalBook. All rights reserved.
+          </div>
+        </div>
       </footer>
+
     </div>
   );
 }
 
-const styles = {
-  container: {
-    backgroundColor: '#F8F9FA',
-    minHeight: '100vh',
-    fontFamily: 'sans-serif',
-  },
-  navbar: {
-    backgroundColor: '#07111E',
-    color: '#ffffff',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '16px 48px',
-  },
-  logoArea: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-  },
-  logoIcon: {
-    fontSize: '22px',
-  },
-  logoText: {
-    fontSize: '20px',
-    fontWeight: '700',
-  },
-  navLinks: {
-    display: 'flex',
-    gap: '32px',
-  },
-  navLink: {
-    background: 'none',
-    border: 'none',
-    color: '#94A3B8',
-    fontSize: '15px',
-    fontWeight: '500',
-    cursor: 'pointer',
-  },
-  activeNavLink: {
-    color: '#34D399',
-    fontWeight: '600',
-  },
-  navRight: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px',
-  },
-  loginBtn: {
-    backgroundColor: '#ffffff',
-    color: '#07111E',
-    border: 'none',
-    padding: '8px 20px',
-    borderRadius: '6px',
-    fontWeight: '600',
-    cursor: 'pointer',
-  },
-  profileIconBtn: {
-    backgroundColor: '#1E293B',
-    color: '#ffffff',
-    border: 'none',
-    width: '36px',
-    height: '36px',
-    borderRadius: '50%',
-    cursor: 'pointer',
-  },
-  heroSection: {
-    position: 'relative',
-    backgroundColor: '#07111E',
-    backgroundImage: 'url("https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1400&q=80")',
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    padding: '60px 48px 130px 48px',
-    color: '#ffffff',
-    textAlign: 'center',
-  },
-  heroOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(7, 17, 30, 0.88)',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
-  },
-  heroContent: {
-    position: 'relative',
-    zIndex: 2,
-    maxWidth: '700px',
-  },
-  badgeResmi: {
-    backgroundColor: 'rgba(52, 211, 153, 0.15)',
-    color: '#34D399',
-    padding: '6px 14px',
-    borderRadius: '20px',
-    fontSize: '11px',
-    fontWeight: '700',
-    letterSpacing: '0.5px',
-    display: 'inline-block',
-    marginBottom: '16px',
-    border: '1px solid rgba(52, 211, 153, 0.3)',
-  },
-  heroTitle: {
-    fontSize: '44px',
-    fontWeight: '800',
-    lineHeight: '1.2',
-    marginBottom: '12px',
-  },
-  highlightText: {
-    color: '#A3E635',
-  },
-  heroSubtitle: {
-    fontSize: '15px',
-    color: '#94A3B8',
-    marginBottom: '28px',
-  },
-  heroActionBtns: {
-    display: 'flex',
-    justifyContent: 'center',
-    gap: '12px',
-  },
-  primaryActionBtn: {
-    backgroundColor: '#A3E635',
-    color: '#064E3B',
-    border: 'none',
-    padding: '12px 24px',
-    borderRadius: '8px',
-    fontWeight: '700',
-    cursor: 'pointer',
-    fontSize: '14px',
-  },
-  secondaryActionBtn: {
-    backgroundColor: 'transparent',
-    color: '#ffffff',
-    border: '1px solid #475569',
-    padding: '12px 24px',
-    borderRadius: '8px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    fontSize: '14px',
-  },
-  searchBox: {
-    position: 'absolute',
-    bottom: '-35px',
-    left: '80px',
-    right: '80px',
-    zIndex: 3,
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    padding: '20px 24px',
-    boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
-    display: 'flex',
-    gap: '16px',
-    alignItems: 'center',
-  },
-  searchField: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
-    borderRight: '1px solid #E5E7EB',
-    paddingRight: '16px',
-    textAlign: 'left',
-  },
-  searchLabel: {
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  selectInput: {
-    border: 'none',
-    outline: 'none',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#1F2937',
-    backgroundColor: 'transparent',
-    width: '100%',
-    cursor: 'pointer',
-  },
-  dateInput: {
-    border: 'none',
-    outline: 'none',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#1F2937',
-    backgroundColor: 'transparent',
-    width: '100%',
-    cursor: 'pointer',
-  },
-  searchBtn: {
-    backgroundColor: '#A3E635',
-    color: '#064E3B',
-    border: 'none',
-    padding: '14px 28px',
-    borderRadius: '8px',
-    fontWeight: '700',
-    cursor: 'pointer',
-    fontSize: '14px',
-  },
-  section: {
-    padding: '80px 80px 40px 80px',
-    maxWidth: '1200px',
-    margin: '0 auto',
-  },
-  sectionHeaderFlex: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginBottom: '24px',
-  },
-  sectionTitle: {
-    fontSize: '22px',
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: '4px',
-  },
-  sectionDesc: {
-    fontSize: '14px',
-    color: '#64748B',
-  },
-  realtimeBadge: {
-    fontSize: '12px',
-    color: '#059669',
-    backgroundColor: '#ECFDF5',
-    padding: '6px 12px',
-    borderRadius: '20px',
-    fontWeight: '600',
-    border: '1px solid #A7F3D0',
-  },
-  lapanganGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '24px',
-  },
-  lapanganCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    overflow: 'hidden',
-    border: '1px solid #E2E8F0',
-    cursor: 'pointer',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-    transition: 'transform 0.2s',
-  },
-  imageContainer: {
-    position: 'relative',
-    height: '170px',
-  },
-  cardImage: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-  },
-  cardBadgeTop: {
-    position: 'absolute',
-    top: '12px',
-    left: '12px',
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    color: '#ffffff',
-    padding: '4px 10px',
-    borderRadius: '4px',
-    fontSize: '11px',
-    fontWeight: '600',
-  },
-  tersediaBadge: {
-    position: 'absolute',
-    top: '12px',
-    right: '12px',
-    backgroundColor: '#ECFDF5',
-    color: '#059669',
-    padding: '4px 10px',
-    borderRadius: '6px',
-    fontSize: '11px',
-    fontWeight: '700',
-  },
-  cardBody: {
-    padding: '20px',
-  },
-  cardTitle: {
-    fontSize: '16px',
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: '6px',
-  },
-  cardLantai: {
-    fontSize: '13px',
-    color: '#64748B',
-    marginBottom: '20px',
-  },
-  cardFooter: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTop: '1px solid #F1F5F9',
-    paddingTop: '14px',
-  },
-  tarifLabel: {
-    fontSize: '10px',
-    color: '#94A3B8',
-    fontWeight: '700',
-    letterSpacing: '0.5px',
-  },
-  tarifValue: {
-    fontSize: '14px',
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  arrowBtn: {
-    backgroundColor: '#F1F5F9',
-    border: 'none',
-    width: '32px',
-    height: '32px',
-    borderRadius: '50%',
-    cursor: 'pointer',
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  caraBookingSection: {
-    backgroundColor: '#ffffff',
-    padding: '60px 80px',
-    borderTop: '1px solid #E2E8F0',
-    borderBottom: '1px solid #E2E8F0',
-    textAlign: 'center',
-  },
-  centerHeader: {
-    maxWidth: '600px',
-    margin: '0 auto 40px auto',
-  },
-  smallSubtitle: {
-    fontSize: '11px',
-    fontWeight: '700',
-    color: '#059669',
-    letterSpacing: '1px',
-    textTransform: 'uppercase',
-  },
-  stepGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '24px',
-    maxWidth: '1100px',
-    margin: '0 auto',
-    textAlign: 'left',
-  },
-  stepCard: {
-    backgroundColor: '#F8F9FA',
-    border: '1px solid #E2E8F0',
-    borderRadius: '12px',
-    padding: '24px',
-    position: 'relative',
-  },
-  stepNumber: {
-    backgroundColor: '#07111E',
-    color: '#ffffff',
-    width: '32px',
-    height: '32px',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: '700',
-    fontSize: '14px',
-    marginBottom: '16px',
-  },
-  stepTitle: {
-    fontSize: '16px',
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: '6px',
-  },
-  stepDesc: {
-    fontSize: '13px',
-    color: '#64748B',
-    marginBottom: '16px',
-    lineHeight: '1.4',
-  },
-  stepFooterNote: {
-    fontSize: '12px',
-    color: '#059669',
-    fontWeight: '600',
-  },
-  bottomBannerSection: {
-    maxWidth: '1100px',
-    margin: '50px auto',
-    padding: '0 20px',
-  },
-  bottomBannerContent: {
-    backgroundColor: '#07111E',
-    borderRadius: '16px',
-    padding: '30px 40px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    color: '#ffffff',
-  },
-  bannerInfo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '20px',
-  },
-  bannerIcon: {
-    fontSize: '36px',
-  },
-  bannerTitle: {
-    fontSize: '16px',
-    fontWeight: '700',
-    marginBottom: '4px',
-  },
-  bannerDesc: {
-    fontSize: '13px',
-    color: '#94A3B8',
-  },
-  pesanSekarangBtn: {
-    backgroundColor: '#A3E635',
-    color: '#064E3B',
-    border: 'none',
-    padding: '12px 24px',
-    borderRadius: '8px',
-    fontWeight: '700',
-    cursor: 'pointer',
-    fontSize: '14px',
-  },
-  footer: {
-    backgroundColor: '#07111E',
-    color: '#64748B',
-    textAlign: 'center',
-    padding: '30px',
-    fontSize: '13px',
-    borderTop: '1px solid #1E293B',
-  },
-  footerText: {
-    marginBottom: '6px',
-    color: '#94A3B8',
-  },
-  footerCopy: {
-    fontSize: '12px',
-  },
-};
+export default HomePage;
