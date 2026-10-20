@@ -1,65 +1,176 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from "react";
 
-function JadwalPage({ onNavigate, user, onLogout }) {
-  const [selectedCourt, setSelectedCourt] = useState('Lapangan A');
-  const [selectedDate, setSelectedDate] = useState('2026-10-21');
-  const [selectedSlot, setSelectedSlot] = useState('19.00 - 20.00');
+const COURTS = {
+  "Lapangan A": {
+    type: "VINYL",
+    image:
+      "https://i.pinimg.com/1200x/47/a1/35/47a135ace3bb63af9268b3dc450b5008.jpg",
+    weekdayPrice: 150000,
+    weekendPrice: 180000,
+  },
+  "Lapangan B": {
+    type: "VINYL",
+    image:
+      "https://i.pinimg.com/1200x/81/b6/3b/81b63bd45899d3951ce49dfbe95262ba.jpg",
+    weekdayPrice: 150000,
+    weekendPrice: 180000,
+  },
+  "Lapangan C": {
+    type: "RUMPUT SINTETIS",
+    image:
+      "https://i.pinimg.com/1200x/ad/03/65/ad03659eed8b847cf1b46679c7bfe8d3.jpg",
+    weekdayPrice: 120000,
+    weekendPrice: 150000,
+  },
+};
 
-  // State untuk Kontrol Modal Peringatan Slot Terisi
-  const [showBookedModal, setShowBookedModal] = useState(false);
-  const [bookedSlotInfo, setBookedSlotInfo] = useState('');
+const SLOTS = Array.from({ length: 15 }, (_, index) => {
+  const start = index + 8;
+  return `${String(start).padStart(2, "0")}.00 - ${String(start + 1).padStart(2, "0")}.00`;
+});
 
-  // State & Ref untuk Pop-up Kalender Interaktif
+const STORAGE_KEY = "bookings";
+
+function getLocalDateString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function readBookings() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function formatRupiah(amount) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function formatTanggalIndonesia(dateString) {
+  if (!dateString) return "Pilih tanggal";
+  const date = new Date(`${dateString}T12:00:00`);
+  return new Intl.DateTimeFormat("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function isCancelled(booking) {
+  return String(booking.status || "").toLowerCase() === "cancelled" ||
+    String(booking.status || "").toLowerCase() === "dibatalkan";
+}
+
+function bookingTime(booking) {
+  return booking.slot || booking.time || "";
+}
+
+export default function JadwalPage({ user, onNavigate, onLogout }) {
+  const today = getLocalDateString();
+  const [selectedCourt, setSelectedCourt] = useState("Lapangan A");
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [selectedSlot, setSelectedSlot] = useState("");
+  const [selectedPayment, setSelectedPayment] = useState("gopay");
+  const [customerName, setCustomerName] = useState(
+    user?.name || user?.username || ""
+  );
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [bookings, setBookings] = useState(readBookings);
+  const [bookingNotice, setBookingNotice] = useState("");
+  const [error, setError] = useState("");
+  const [showQrisModal, setShowQrisModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [viewDate, setViewDate] = useState(new Date(2026, 9, 1)); // Oktober 2026
+  const [viewDate, setViewDate] = useState(() => {
+    const initial = new Date();
+    initial.setDate(1);
+    initial.setHours(12, 0, 0, 0);
+    return initial;
+  });
   const calendarRef = useRef(null);
 
-  // Tutup kalender jika klik di luar area
+  useEffect(() => {
+    const savedName = user?.name || user?.username || "";
+    if (savedName) setCustomerName(savedName);
+  }, [user]);
+
+  useEffect(() => {
+    const syncBookings = () => setBookings(readBookings());
+    window.addEventListener("storage", syncBookings);
+    window.addEventListener("futsalbook-bookings-updated", syncBookings);
+    return () => {
+      window.removeEventListener("storage", syncBookings);
+      window.removeEventListener("futsalbook-bookings-updated", syncBookings);
+    };
+  }, []);
+
   useEffect(() => {
     function handleClickOutside(event) {
       if (calendarRef.current && !calendarRef.current.contains(event.target)) {
         setShowCalendar(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const changeMonth = (offset) => {
-    setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + offset, 1));
-  };
+  const currentCourt = COURTS[selectedCourt];
+  const selectedDateObj = new Date(`${selectedDate}T12:00:00`);
+  const dayOfWeek = selectedDateObj.getDay();
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  const activePrice = isWeekend
+    ? currentCourt.weekendPrice
+    : currentCourt.weekdayPrice;
 
-  const formatMonthYear = (date) => {
-    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  const changeMonth = (offset) => {
+    setViewDate((previous) =>
+      new Date(previous.getFullYear(), previous.getMonth() + offset, 1, 12)
+    );
   };
 
   const renderCalendarDays = () => {
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth();
-    const firstDayOfMonth = new Date(year, month, 1).getDay();
+    const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const days = [];
 
-    for (let i = 0; i < firstDayOfMonth; i++) {
-      days.push(<div key={`empty-${i}`} className="h-8 w-8"></div>);
+    for (let index = 0; index < firstDay; index += 1) {
+      days.push(<div key={`empty-${index}`} className="h-9 w-9" />);
     }
 
-    for (let day = 1; day <= daysInMonth; day++) {
-      const formattedDayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const isSelected = selectedDate === formattedDayStr;
-
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const dateString = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const isSelected = selectedDate === dateString;
+      const isPast = dateString < today;
       days.push(
         <button
-          key={day}
+          key={dateString}
           type="button"
+          disabled={isPast}
           onClick={() => {
-            setSelectedDate(formattedDayStr);
+            setSelectedDate(dateString);
+            setSelectedSlot("");
+            setBookingNotice("");
+            setError("");
             setShowCalendar(false);
           }}
-          className={`h-8 w-8 rounded-full text-xs font-semibold flex items-center justify-center transition ${
+          className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold transition ${
             isSelected
-              ? 'bg-emerald-400 text-slate-950 font-bold shadow-lg shadow-emerald-400/30 scale-105'
-              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+              ? "bg-emerald-400 text-slate-950 shadow-lg"
+              : isPast
+                ? "cursor-not-allowed text-slate-700"
+                : "text-slate-300 hover:bg-slate-800 hover:text-white"
           }`}
         >
           {day}
@@ -69,403 +180,384 @@ function JadwalPage({ onNavigate, user, onLogout }) {
     return days;
   };
 
-  // Detail konfigurasi masing-masing lapangan
-  const courtDetails = {
-    'Lapangan A': {
-      type: 'VINYL',
-      image: 'https://i.pinimg.com/1200x/47/a1/35/47a135ace3bb63af9268b3dc450b5008.jpg',
-      weekdayPrice: 'Rp150.000',
-      weekendPrice: 'Rp180.000',
-    },
-    'Lapangan B': {
-      type: 'VINYL',
-      image: 'https://i.pinimg.com/1200x/6d/f5/88/6df588510bcc0faade4d9682b607dc76.jpg',
-      weekdayPrice: 'Rp150.000',
-      weekendPrice: 'Rp180.000',
-    },
-    'Lapangan C': {
-      type: 'RUMPUT SINTETIS',
-      image: 'https://i.pinimg.com/736x/15/35/24/153524e8c9cad4dadebb131012f90f2a.jpg',
-      weekdayPrice: 'Rp120.000',
-      weekendPrice: 'Rp150.000',
+  const getBookingForSlot = (slot) =>
+    bookings.find(
+      (booking) =>
+        (booking.court === selectedCourt || booking.lapangan === selectedCourt) &&
+        (booking.date === selectedDate || booking.hariTanggal?.includes(selectedDate)) &&
+        bookingTime(booking) === slot &&
+        !isCancelled(booking)
+    );
+
+  const selectedSlotBooking = selectedSlot
+    ? getBookingForSlot(selectedSlot)
+    : null;
+
+  const saveBookingAfterPayment = () => {
+    if (user?.role !== "player") {
+      setError("Silakan masuk menggunakan akun Player untuk melakukan booking.");
+      setShowQrisModal(false);
+      return false;
     }
-  };
 
-  const slots = [
-    { time: '08.00 - 09.00', status: 'tersedia' },
-    { time: '09.00 - 10.00', status: 'tersedia' },
-    { time: '10.00 - 11.00', status: 'tersedia' },
-    { time: '11.00 - 12.00', status: 'tersedia' },
-    { time: '12.00 - 13.00', status: 'tersedia' },
-    { time: '13.00 - 14.00', status: 'terisi' },
-    { time: '14.00 - 15.00', status: 'tersedia' },
-    { time: '15.00 - 16.00', status: 'tersedia' },
-    { time: '16.00 - 17.00', status: 'tersedia' },
-    { time: '17.00 - 18.00', status: 'tersedia' },
-    { time: '18.00 - 19.00', status: 'tersedia' },
-    { time: '19.00 - 20.00', status: 'tersedia' },
-    { time: '20.00 - 21.00', status: 'tersedia' },
-    { time: '21.00 - 22.00', status: 'tersedia' },
-    { time: '22.00 - 23.00', status: 'tersedia' },
-  ];
-
-  const currentCourt = courtDetails[selectedCourt];
-
-  const formatTanggalIndonesia = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('id-ID', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    }).format(date);
-  };
-
-  const isWeekend = (dateString) => {
-    const day = new Date(dateString).getDay();
-    return day === 0 || day === 6;
-  };
-
-  const activePrice = isWeekend(selectedDate) 
-    ? currentCourt.weekendPrice 
-    : currentCourt.weekdayPrice;
-
-  const handleSlotClick = (slot) => {
-    if (slot.status === 'terisi') {
-      setBookedSlotInfo(slot.time);
-      setShowBookedModal(true);
-    } else {
-      setSelectedSlot(slot.time);
+    const name = (user?.name || user?.username || customerName).trim();
+    if (!name) {
+      setError("Nama pemesan belum tersedia. Lengkapi nama akun terlebih dahulu.");
+      setShowQrisModal(false);
+      return false;
     }
+    if (!customerPhone.trim()) {
+      setError("Nomor telepon wajib diisi sebelum melakukan booking.");
+      setShowQrisModal(false);
+      return false;
+    }
+    if (!/^[+0-9][0-9+\s()-]{7,19}$/.test(customerPhone.trim())) {
+      setError("Masukkan nomor telepon yang valid, minimal 8 digit.");
+      setShowQrisModal(false);
+      return false;
+    }
+    if (!selectedDate || !selectedSlot) {
+      setError("Pilih tanggal dan jam bermain terlebih dahulu.");
+      return false;
+    }
+    if (selectedDate < today) {
+      setError("Tanggal booking tidak boleh sudah lewat.");
+      return false;
+    }
+
+    const latestBookings = readBookings();
+    const alreadyBooked = latestBookings.some(
+      (booking) =>
+        (booking.court === selectedCourt || booking.lapangan === selectedCourt) &&
+        (booking.date === selectedDate || booking.hariTanggal?.includes(selectedDate)) &&
+        bookingTime(booking) === selectedSlot &&
+        !isCancelled(booking)
+    );
+
+    if (alreadyBooked) {
+      setBookings(latestBookings);
+      setError("Slot ini sudah dipesan. Silakan pilih jam lain.");
+      setShowQrisModal(false);
+      return false;
+    }
+
+    const newBooking = {
+      id: `FB-${Date.now()}`,
+      userId: user?.id || user?.email || name,
+      playerName: name,
+      customerName: name,
+      phone: customerPhone.trim(),
+      email: user?.email || "",
+      court: selectedCourt,
+      lapangan: selectedCourt,
+      date: selectedDate,
+      hariTanggal: formatTanggalIndonesia(selectedDate),
+      slot: selectedSlot,
+      time: selectedSlot,
+      payment: selectedPayment.toUpperCase(),
+      price: activePrice,
+      totalHarga: formatRupiah(activePrice),
+      status: "TERISI",
+      pesanStatus: `Slot ${selectedSlot} di ${selectedCourt} telah dibooking oleh ${name}.`,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedBookings = [newBooking, ...latestBookings];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedBookings));
+    setBookings(updatedBookings);
+    window.dispatchEvent(new Event("futsalbook-bookings-updated"));
+    setError("");
+    setBookingNotice(
+      `Booking berhasil dibuat. ${selectedCourt}, ${selectedSlot}, ${formatTanggalIndonesia(selectedDate)}.`
+    );
+    setShowQrisModal(false);
+    setShowSuccessModal(true);
+    setCustomerPhone("");
+    return true;
   };
 
   const handleBooking = () => {
-    if (!selectedSlot) {
-      alert('Silakan pilih slot jam terlebih dahulu.');
+    setError("");
+    setBookingNotice("");
+
+    if (user?.role !== "player") {
+      setError("Hanya akun Player yang dapat melakukan booking.");
       return;
     }
-    if (onNavigate) {
-      onNavigate('booking');
+    if (!customerPhone.trim()) {
+      setError("Masukkan nomor telepon terlebih dahulu.");
+      return;
+    }
+    if (!/^[+0-9][0-9+\s()-]{7,19}$/.test(customerPhone.trim())) {
+      setError("Masukkan nomor telepon yang valid, minimal 8 digit.");
+      return;
+    }
+    if (!selectedSlot) {
+      setError("Silakan pilih slot jam terlebih dahulu.");
+      return;
+    }
+    if (selectedSlotBooking) {
+      const pemesan = selectedSlotBooking.playerName || selectedSlotBooking.customerName || "pengguna lain";
+      setError(`Slot jam ${selectedSlot} sudah dibooking oleh ${pemesan}. Silakan pilih jam lain.`);
+      return;
+    }
+    if (selectedDate < today) {
+      setError("Tanggal booking tidak boleh sudah lewat.");
+      return;
+    }
+
+    if (selectedPayment === "qris") {
+      setShowQrisModal(true);
+    } else {
+      saveBookingAfterPayment();
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[#070b19] text-white font-sans antialiased selection:bg-emerald-500 selection:text-slate-950 relative">
-      
-      {/* 1. Header Navigation */}
-      <header className="sticky top-0 z-40 bg-[#070b19]/90 backdrop-blur-md border-b border-slate-800/80">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <div 
-              className="flex items-center gap-2.5 cursor-pointer" 
-              onClick={() => onNavigate && onNavigate('home')}
-            >
-              <div className="w-8 h-8 rounded-lg bg-emerald-400 flex items-center justify-center font-bold text-slate-950 shadow-md shadow-emerald-400/20">
-                ⚽
-              </div>
-              <span className="font-extrabold text-lg tracking-tight text-white">
-                Futsal<span className="text-emerald-400">Book</span>
-              </span>
-            </div>
+  const monthLabel = viewDate.toLocaleDateString("id-ID", {
+    month: "long",
+    year: "numeric",
+  });
 
-            <nav className="hidden md:flex items-center gap-1">
-              <button 
-                onClick={() => onNavigate && onNavigate('home')} 
-                className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/40 rounded-lg transition"
-              >
-                Beranda
-              </button>
-              <button 
-                onClick={() => onNavigate && onNavigate('jadwal')} 
-                className="px-4 py-2 text-sm font-semibold text-emerald-400 bg-slate-800/60 rounded-lg transition"
-              >
-                Jadwal Lapangan
-              </button>
-              <button 
-                onClick={() => onNavigate && onNavigate('booking')} 
-                className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/40 rounded-lg transition"
-              >
-                Booking Saya
-              </button>
-            </nav>
-          </div>
+  return (
+    <div className="relative min-h-screen bg-[#070b19] font-sans text-white antialiased selection:bg-emerald-500 selection:text-slate-950">
+      {/* HEADER */}
+      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-[#070b19]/90 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+          <button
+            type="button"
+            onClick={() => onNavigate?.("home")}
+            className="flex items-center gap-2.5 cursor-pointer"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-400 font-bold text-slate-950">⚽</span>
+            <span className="text-lg font-extrabold tracking-tight">Futsal<span className="text-emerald-400">Book</span></span>
+          </button>
+
+          <nav className="hidden items-center gap-1 md:flex">
+            <button type="button" onClick={() => onNavigate?.("home")} className="rounded-lg px-4 py-2 text-sm text-slate-300 transition hover:bg-slate-800/50 hover:text-white cursor-pointer">Beranda</button>
+            <button type="button" onClick={() => onNavigate?.("jadwal")} className="rounded-lg bg-slate-800/60 px-4 py-2 text-sm font-semibold text-emerald-400 cursor-pointer">Jadwal Lapangan</button>
+            {user?.role === "player" && <button type="button" onClick={() => onNavigate?.("booking-saya")} className="rounded-lg px-4 py-2 text-sm text-slate-300 transition hover:bg-slate-800/50 hover:text-white cursor-pointer">Booking Saya</button>}
+            {user?.role === "admin" && <button type="button" onClick={() => onNavigate?.("dashboard")} className="rounded-lg px-4 py-2 text-sm text-slate-300 transition hover:bg-slate-800/50 hover:text-white cursor-pointer">Dashboard</button>}
+          </nav>
 
           <div className="flex items-center gap-3">
             {user ? (
-              <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl">
-                <div className="w-7 h-7 rounded-full bg-emerald-400/20 border border-emerald-400/50 flex items-center justify-center text-emerald-400 font-bold text-xs">
-                  {user.name ? user.name.charAt(0).toUpperCase() : 'S'}
-                </div>
-                <span className="text-xs font-semibold text-slate-200">{user.name || 'Salwa'}</span>
-                <span className="text-slate-600">|</span>
-                <button 
-                  onClick={onLogout}
-                  className="text-xs font-medium text-rose-400 hover:text-rose-300 transition"
-                >
-                  Keluar
-                </button>
+              <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 sm:gap-3">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full border border-emerald-400/50 bg-emerald-400/20 text-xs font-bold text-emerald-400">{(user.name || user.username || user.email || "S").charAt(0).toUpperCase()}</div>
+                <span className="hidden max-w-32 truncate text-xs font-semibold text-slate-200 sm:inline">{user.name || user.username || user.email}</span>
+                <span className="hidden text-slate-600 sm:inline">|</span>
+                <button type="button" onClick={onLogout} className="text-xs font-medium text-rose-400 transition hover:text-rose-300 cursor-pointer">Keluar</button>
               </div>
             ) : (
-              <button 
-                onClick={() => onNavigate && onNavigate('auth')}
-                className="px-5 py-2 text-sm font-semibold text-white bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-xl transition shadow-sm"
-              >
-                Masuk
-              </button>
+              <button type="button" onClick={() => onNavigate?.("auth")} className="rounded-xl border border-slate-700 bg-slate-800 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 cursor-pointer">Masuk</button>
             )}
           </div>
         </div>
       </header>
 
-      {/* 2. Main Layout Container */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* LEFT SIDE: Court Info & Slot Grid */}
-          <div className="lg:col-span-8 space-y-6">
-            
-            {/* Court Hero Image */}
-            <div className="relative rounded-2xl overflow-hidden border border-slate-800 shadow-2xl h-64 md:h-72 bg-slate-900 group">
-              <img 
-                src={currentCourt.image} 
-                alt={selectedCourt} 
-                className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#070b19] via-[#070b19]/40 to-transparent"></div>
-              
-              <div className="absolute bottom-5 left-6 right-6 flex items-end justify-between">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+          {/* PILIH LAPANGAN DAN JAM */}
+          <section className="space-y-6 lg:col-span-8">
+            <div className="group relative h-64 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl md:h-72">
+              <img src={currentCourt.image} alt={selectedCourt} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#070b19] via-[#070b19]/40 to-transparent" />
+              <div className="absolute bottom-5 left-6 right-6 flex items-end justify-between gap-3">
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight mb-1">
-                    FutsalBook Arena
-                  </h1>
-                  <p className="text-xs md:text-sm text-slate-300 flex items-center gap-1.5">
-                    📍 Jl. Akses UI No. 45, Depok,
-                  </p>
+                  <h1 className="mb-1 text-2xl font-black tracking-tight md:text-3xl">FutsalBook Arena</h1>
+                  <p className="flex items-center gap-1.5 text-xs text-slate-300 md:text-sm">📍 Jl. Akses UI No. 45, Depok</p>
                 </div>
-                <span className="px-3.5 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700 text-xs font-semibold text-emerald-400 shadow">
-                  Buka 08.00 – 23.00
-                </span>
+                <span className="shrink-0 rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs font-semibold text-emerald-400 backdrop-blur-md">Buka 08.00–23.00</span>
               </div>
             </div>
 
-            {/* Court Switcher Tabs */}
-            <div className="bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800 flex items-center justify-between gap-2 shadow-lg">
-              <div className="flex items-center gap-2 flex-1">
-                {['Lapangan A', 'Lapangan B', 'Lapangan C'].map((court) => (
-                  <button
-                    key={court}
-                    onClick={() => setSelectedCourt(court)}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-xs md:text-sm font-bold transition ${
-                      selectedCourt === court
-                        ? 'bg-slate-800 text-white border border-slate-700 shadow-md'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-950/40'
-                    }`}
-                  >
-                    {court}
-                  </button>
+            <div className="flex items-center justify-between gap-2 rounded-2xl border border-slate-800 bg-slate-900/80 p-1.5 shadow-lg">
+              <div className="flex flex-1 items-center gap-1 sm:gap-2">
+                {Object.keys(COURTS).map((court) => (
+                  <button key={court} type="button" onClick={() => { setSelectedCourt(court); setSelectedSlot(""); setBookingNotice(""); setError(""); }} className={`flex-1 rounded-xl px-2 py-2.5 text-xs font-bold transition cursor-pointer sm:px-4 sm:text-sm ${selectedCourt === court ? "border border-slate-700 bg-slate-800 text-white shadow-md" : "text-slate-400 hover:bg-slate-950/40 hover:text-slate-200"}`}>{court}</button>
                 ))}
               </div>
-              <span className="hidden sm:inline-block px-3 py-1.5 bg-slate-950 text-emerald-400 text-[11px] font-extrabold rounded-xl border border-slate-800 tracking-wider">
-                {currentCourt.type}
-              </span>
+              <span className="hidden rounded-xl border border-slate-800 bg-slate-950 px-3 py-1.5 text-[11px] font-extrabold tracking-wider text-emerald-400 sm:inline-block">{currentCourt.type}</span>
             </div>
 
-            {/* Date Selector Banner dengan Pop-up Kalender Interaktif */}
+            {/* PEMILIH TANGGAL */}
             <div className="relative" ref={calendarRef}>
-              <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 flex items-center justify-between shadow-lg">
-                <button 
-                  type="button"
-                  onClick={() => {
-                    const d = new Date(selectedDate);
-                    d.setDate(d.getDate() - 1);
-                    setSelectedDate(d.toISOString().split('T')[0]);
-                  }}
-                  className="w-9 h-9 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-white hover:border-slate-700 transition"
-                >
-                  ‹
-                </button>
-
-                <div 
-                  onClick={() => setShowCalendar(!showCalendar)}
-                  className="flex items-center gap-2 font-bold text-sm md:text-base text-white cursor-pointer hover:text-emerald-400 transition"
-                >
-                  📅 <span>{formatTanggalIndonesia(selectedDate)}</span> ▾
-                </div>
-
-                <button 
-                  type="button"
-                  onClick={() => {
-                    const d = new Date(selectedDate);
-                    d.setDate(d.getDate() + 1);
-                    setSelectedDate(d.toISOString().split('T')[0]);
-                  }}
-                  className="w-9 h-9 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-white hover:border-slate-700 transition"
-                >
-                  ›
-                </button>
+              <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/80 p-3.5 shadow-lg">
+                <button type="button" aria-label="Tanggal sebelumnya" disabled={selectedDate <= today} onClick={() => { const date = new Date(`${selectedDate}T12:00:00`); date.setDate(date.getDate() - 1); setSelectedDate(getLocalDateString(date)); setSelectedSlot(""); setError(""); setBookingNotice(""); }} className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-950 text-lg text-slate-300 transition hover:border-slate-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer">‹</button>
+                <button type="button" onClick={() => { setViewDate(new Date(Number(selectedDate.slice(0, 4)), Number(selectedDate.slice(5, 7)) - 1, 1, 12)); setShowCalendar((shown) => !shown); }} className="flex items-center gap-2 text-center text-sm font-bold text-white transition hover:text-emerald-400 md:text-base cursor-pointer">📅 <span>{formatTanggalIndonesia(selectedDate)}</span> ▾</button>
+                <button type="button" aria-label="Tanggal berikutnya" onClick={() => { const date = new Date(`${selectedDate}T12:00:00`); date.setDate(date.getDate() + 1); setSelectedDate(getLocalDateString(date)); setSelectedSlot(""); setError(""); setBookingNotice(""); }} className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-950 text-lg text-slate-300 transition hover:border-slate-700 hover:text-white cursor-pointer">›</button>
               </div>
 
-              {/* POP-UP KALENDER MELAYANG */}
               {showCalendar && (
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-[#0f172a] border border-slate-700/90 rounded-2xl p-4 shadow-2xl shadow-black/80 w-72 backdrop-blur-xl animate-in fade-in duration-200">
-                  <div className="flex items-center justify-between mb-4 px-1">
-                    <button type="button" onClick={() => changeMonth(-1)} className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">‹</button>
-                    <span className="text-sm font-bold text-white tracking-wide">{formatMonthYear(viewDate)}</span>
-                    <button type="button" onClick={() => changeMonth(1)} className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">›</button>
+                <div className="absolute left-1/2 top-full z-50 mt-2 w-72 -translate-x-1/2 rounded-2xl border border-slate-700/90 bg-[#0f172a] p-4 shadow-2xl shadow-black/80">
+                  <div className="mb-4 flex items-center justify-between px-1">
+                    <button type="button" onClick={() => changeMonth(-1)} className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-800 hover:text-white cursor-pointer">‹</button>
+                    <span className="text-sm font-bold tracking-wide">{monthLabel}</span>
+                    <button type="button" onClick={() => changeMonth(1)} className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-800 hover:text-white cursor-pointer">›</button>
                   </div>
-
-                  <div className="grid grid-cols-7 gap-1 text-center mb-2">
-                    {['SUN', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].map((d) => (
-                      <span key={d} className="text-[10px] font-bold text-slate-400 uppercase">{d}</span>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-7 gap-1 justify-items-center">
-                    {renderCalendarDays()}
-                  </div>
+                  <div className="mb-2 grid grid-cols-7 gap-1 text-center">{["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"].map((day) => <span key={day} className="text-[10px] font-bold uppercase text-slate-400">{day}</span>)}</div>
+                  <div className="grid grid-cols-7 justify-items-center gap-1">{renderCalendarDays()}</div>
                 </div>
               )}
             </div>
 
-            {/* Slots Card Container */}
-            <div className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 shadow-2xl">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-white tracking-tight">Pilih Jam</h3>
-                <span className="text-xs text-slate-400 font-medium">15 slot tersedia per hari</span>
+            {/* SLOT JAM */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl sm:p-6">
+              <div className="mb-6 flex items-center justify-between gap-3">
+                <h2 className="text-lg font-bold tracking-tight">Pilih Jam</h2>
+                <span className="text-right text-xs font-medium text-slate-400">08.00–23.00</span>
               </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-                {slots.map((slot, index) => {
-                  const isSelected = selectedSlot === slot.time;
-                  const isBooked = slot.status === 'terisi';
+              
+              <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {SLOTS.map((slot) => {
+                  const slotBooking = getBookingForSlot(slot);
+                  const isSelected = selectedSlot === slot && !slotBooking;
 
                   return (
                     <button
-                      key={index}
+                      key={slot}
                       type="button"
-                      onClick={() => handleSlotClick(slot)}
-                      className={`py-3 px-2 rounded-xl text-xs md:text-sm font-bold border transition duration-200 flex flex-col items-center justify-center gap-0.5 ${
-                        isBooked
-                          ? 'bg-slate-950/50 border-slate-900 text-slate-500 hover:border-rose-500/40 cursor-pointer'
+                      onClick={() => {
+                        if (slotBooking) {
+                          const pemesan = slotBooking.playerName || slotBooking.customerName || "pengguna lain";
+                          setError(`Slot jam ${slot} sudah dibooking oleh ${pemesan}. Silakan pilih jam lain.`);
+                          setBookingNotice("");
+                        } else {
+                          setSelectedSlot(slot);
+                          setBookingNotice("");
+                          setError("");
+                        }
+                      }}
+                      className={`rounded-xl border p-3 text-xs font-semibold transition cursor-pointer ${
+                        slotBooking
+                          ? "border-rose-800 bg-rose-950/70 text-rose-300 hover:border-rose-600"
                           : isSelected
-                          ? 'bg-emerald-400 text-slate-950 border-emerald-400 shadow-lg shadow-emerald-400/20 ring-2 ring-emerald-400/50'
-                          : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-400'
+                            ? "border-emerald-400 bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-400/20"
+                            : "border-slate-800 bg-slate-950 text-slate-200 hover:border-slate-600"
                       }`}
                     >
-                      <span>{slot.time}</span>
-                      {isBooked && <span className="text-[10px] font-medium uppercase text-slate-500">TERISI</span>}
+                      <span className="block">{slot}</span>
+                      {slotBooking && (
+                        <span className="mt-1 block text-[9px] uppercase tracking-wide font-extrabold text-rose-400">
+                          TERISI
+                        </span>
+                      )}
                     </button>
                   );
                 })}
               </div>
 
-              {/* Legend Indicator */}
-              <div className="flex items-center gap-6 pt-4 border-t border-slate-800/80 text-xs font-semibold">
-                <div className="flex items-center gap-2">
-                  <span className="w-3.5 h-3.5 rounded-md bg-emerald-500/20 border border-emerald-400"></span>
-                  <span className="text-slate-300">Tersedia</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-3.5 h-3.5 rounded-md bg-slate-950 border border-slate-900"></span>
-                  <span className="text-slate-500">Terisi</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-3.5 h-3.5 rounded-md bg-emerald-400"></span>
-                  <span className="text-slate-300">Dipilih</span>
-                </div>
+              {error && <div role="alert" className="mb-4 rounded-xl border border-rose-800 bg-rose-950/40 p-4 text-sm text-rose-200">{error}</div>}
+              {bookingNotice && <div role="status" className="mb-4 rounded-xl border border-emerald-700 bg-emerald-950/40 p-4 text-sm text-emerald-200">{bookingNotice}</div>}
+
+              <div className="flex flex-wrap items-center gap-5 border-t border-slate-800/80 pt-4 text-xs font-semibold">
+                <div className="flex items-center gap-2"><span className="h-3.5 w-3.5 rounded-md border border-slate-800 bg-slate-950" /><span className="text-slate-300">Tersedia</span></div>
+                <div className="flex items-center gap-2"><span className="h-3.5 w-3.5 rounded-md bg-emerald-400" /><span className="text-slate-300">Dipilih</span></div>
+                <div className="flex items-center gap-2"><span className="h-3.5 w-3.5 rounded-md border border-rose-800 bg-rose-950" /><span className="text-slate-300">Terisi / Dipesan</span></div>
               </div>
-
             </div>
+          </section>
 
-          </div>
-
-          {/* RIGHT SIDE: Pricing Card & Booking Summary */}
-          <div className="lg:col-span-4 space-y-6">
-            
-            <div className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
-              <h3 className="text-base font-bold text-white tracking-tight border-b border-slate-800 pb-3">
-                Harga Lapangan
-              </h3>
-              <div className="space-y-2.5 text-xs md:text-sm">
-                <div className="flex justify-between items-center text-slate-300">
-                  <span>Weekday (Sen - Jum)</span>
-                  <span className="font-bold text-white">{currentCourt.weekdayPrice} <span className="text-slate-400 font-normal">/jam</span></span>
-                </div>
-                <div className="flex justify-between items-center text-slate-300">
-                  <span>Weekend (Sab - Min)</span>
-                  <span className="font-bold text-white">{currentCourt.weekendPrice} <span className="text-slate-400 font-normal">/jam</span></span>
-                </div>
+          {/* HARGA DAN RINGKASAN */}
+          <aside className="space-y-6 lg:col-span-4">
+            <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-xl">
+              <h2 className="border-b border-slate-800 pb-3 text-base font-bold">Harga Lapangan</h2>
+              <div className="space-y-3 text-xs sm:text-sm">
+                <div className="flex items-center justify-between gap-3 text-slate-300"><span>Weekday (Sen–Jum)</span><span className="font-bold text-white">{formatRupiah(currentCourt.weekdayPrice)}<span className="font-normal text-slate-400">/jam</span></span></div>
+                <div className="flex items-center justify-between gap-3 text-slate-300"><span>Weekend (Sab–Min)</span><span className="font-bold text-white">{formatRupiah(currentCourt.weekendPrice)}<span className="font-normal text-slate-400">/jam</span></span></div>
               </div>
             </div>
 
-            <div className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 shadow-2xl space-y-6">
-              <h3 className="text-base font-bold text-white tracking-tight border-b border-slate-800 pb-3">
-                Ringkasan Booking
-              </h3>
+            <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/90 p-6 shadow-xl">
+              <h2 className="border-b border-slate-800 pb-3 text-lg font-bold">Ringkasan Booking</h2>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between gap-4"><span className="text-slate-400">Lapangan</span><span className="font-semibold text-white">{selectedCourt}</span></div>
+                <div className="flex justify-between gap-4"><span className="text-slate-400">Tanggal</span><span className="text-right font-semibold text-white">{formatTanggalIndonesia(selectedDate)}</span></div>
+                <div className="flex justify-between gap-4"><span className="text-slate-400">Waktu</span><span className="text-right font-semibold text-white">{selectedSlot || "Belum dipilih"}</span></div>
+              </div>
 
-              <div className="space-y-3 text-xs md:text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Lapangan</span>
-                  <span className="font-bold text-white">{selectedCourt}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Tanggal</span>
-                  <span className="font-semibold text-slate-200">{formatTanggalIndonesia(selectedDate)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Waktu</span>
-                  <span className="font-semibold text-emerald-400">{selectedSlot ? `${selectedSlot} (1 jam)` : 'Belum dipilih'}</span>
+              <div className="space-y-2 border-t border-slate-800 pt-3">
+                <label htmlFor="customerName" className="block text-xs font-semibold uppercase tracking-wider text-slate-400">Nama Pemesan</label>
+                <input id="customerName" type="text" value={user?.name || user?.username || customerName} onChange={(event) => setCustomerName(event.target.value)} readOnly={Boolean(user?.name || user?.username)} placeholder="Masukkan nama pemesan" className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none read-only:opacity-80" />
+              </div>
+              
+              <div className="space-y-2 border-t border-slate-800 pt-3">
+                <label
+                  htmlFor="customerPhone"
+                  className="block text-xs font-semibold uppercase tracking-wider text-slate-400"
+                >
+                  No. Telepon
+                </label>
+                <input
+                  id="customerPhone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  value={customerPhone}
+                  onChange={(event) => {
+                    setCustomerPhone(event.target.value);
+                    setError("");
+                  }}
+                  required
+                  maxLength={20}
+                  placeholder="Contoh: 081234567890"
+                  aria-describedby="customerPhoneHelp"
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                />
+                <p id="customerPhoneHelp" className="text-[11px] leading-5 text-slate-500">
+                  Masukkan nomor yang aktif agar admin dapat menghubungi kamu.
+                </p>
+              </div>
+
+              <div className="space-y-2 border-t border-slate-800 pt-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Metode Pembayaran</p>
+                <div className="space-y-2">
+                  {[
+                    { value: "qris", title: "QRIS (Simulasi Scan)", detail: "Simulasi pembayaran QRIS", symbol: "▦" },
+                    { value: "gopay", title: "GoPay", detail: "Pembayaran melalui GoPay", symbol: "G" },
+                    { value: "dana", title: "DANA", detail: "Pembayaran melalui DANA", symbol: "D" },
+                    { value: "ovo", title: "OVO", detail: "Pembayaran melalui OVO", symbol: "O" },
+                  ].map((payment) => (
+                    <label key={payment.value} className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 transition ${selectedPayment === payment.value ? "border-emerald-500 bg-emerald-500/10" : "border-slate-800 bg-slate-950 hover:border-slate-700"}`}>
+                      <span className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/20 text-xs font-bold text-emerald-400">{payment.symbol}</span><span><span className="block text-xs font-bold text-white">{payment.title}</span><span className="mt-0.5 block text-[10px] text-slate-400">{payment.detail}</span></span></span>
+                      <input type="radio" name="payment" value={payment.value} checked={selectedPayment === payment.value} onChange={(event) => setSelectedPayment(event.target.value)} className="accent-emerald-400 cursor-pointer" />
+                    </label>
+                  ))}
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-800 flex justify-between items-center">
-                <span className="text-sm text-slate-300 font-medium">Total Harga</span>
-                <span className="text-xl font-black text-emerald-400">
-                  {selectedSlot ? activePrice : 'Rp0'}
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleBooking}
-                className="w-full py-3.5 bg-emerald-400 hover:bg-emerald-500 text-slate-950 font-extrabold rounded-xl transition shadow-lg shadow-emerald-400/20 text-sm tracking-wide"
-              >
-                Booking Sekarang
-              </button>
+              <div className="flex items-center justify-between border-t border-slate-800 pt-3"><span className="font-medium text-slate-400">Total Harga</span><span className="text-lg font-bold text-emerald-400">{selectedSlot ? formatRupiah(activePrice) : "Rp0"}</span></div>
+              <button type="button" onClick={handleBooking} disabled={!selectedSlot || Boolean(selectedSlotBooking)} className="mt-2 w-full rounded-xl bg-emerald-400 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-400/20 transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400 disabled:shadow-none cursor-pointer">{selectedSlotBooking ? "Slot Sudah Dipesan" : "Booking Sekarang"}</button>
+              {user?.role !== "player" && <p className="text-xs leading-5 text-amber-300">Login sebagai Player diperlukan untuk melakukan booking.</p>}
             </div>
-
-          </div>
-
+          </aside>
         </div>
       </main>
 
-      {/* 3. MODAL PERINGATAN "SLOT SUDAH TERISI" */}
-      {showBookedModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-[#ffffff] text-slate-900 p-8 rounded-3xl w-full max-w-sm text-center shadow-2xl border border-slate-100 transform transition-all scale-100">
-            <div className="w-14 h-14 rounded-full bg-rose-100 border border-rose-200 flex items-center justify-center mx-auto mb-4 text-rose-500 text-2xl font-bold">
-              !
-            </div>
-            <h3 className="text-xl font-black text-slate-900 mb-2">
-              Slot sudah terisi
-            </h3>
-            <p className="text-slate-500 text-xs leading-relaxed mb-6">
-              Maaf, slot {bookedSlotInfo || '19.00 – 20.00'} di {selectedCourt} baru saja dipesan orang lain. Silakan pilih jam lain.
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowBookedModal(false)}
-              className="w-full py-3 bg-[#0a1b3a] hover:bg-[#122b5c] text-white font-bold rounded-xl transition text-sm shadow-md"
-            >
-              Pilih Jam Lain
-            </button>
+      {/* MODAL QRIS */}
+      {showQrisModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div role="dialog" aria-modal="true" aria-labelledby="qris-title" className="w-full max-w-sm space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-6 text-center shadow-2xl">
+            <h2 id="qris-title" className="text-lg font-bold">Simulasi Pembayaran QRIS</h2>
+            <p className="text-xs leading-5 text-slate-400">Ini hanya demo frontend. Tidak ada pembayaran nyata yang diproses.</p>
+            <div className="mx-auto flex h-48 w-48 items-center justify-center rounded-xl border-4 border-emerald-400 bg-white p-3"><div className="border-2 border-dashed border-slate-950 p-3 text-xs font-black tracking-tight text-slate-950">QRIS DEMO FUTSALBOOK</div></div>
+            <button type="button" onClick={saveBookingAfterPayment} className="w-full rounded-xl bg-emerald-400 py-3 text-xs font-bold text-slate-950 transition hover:bg-emerald-500 cursor-pointer">Simulasikan Pembayaran Berhasil</button>
+            <button type="button" onClick={() => setShowQrisModal(false)} className="w-full rounded-xl bg-slate-800 py-2 text-xs font-medium text-slate-300 transition hover:bg-slate-700 cursor-pointer">Batal</button>
           </div>
         </div>
       )}
 
+      {/* MODAL BOOKING BERHASIL */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div role="dialog" aria-modal="true" aria-labelledby="success-title" className="w-full max-w-sm space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-6 text-center shadow-2xl">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/20 text-3xl text-emerald-400">✓</div>
+            <h2 id="success-title" className="text-xl font-bold">Booking Berhasil Dibuat!</h2>
+            <p className="text-xs leading-5 text-slate-400">Booking tersimpan dengan status <span className="font-semibold text-rose-400 uppercase">Terisi</span>.</p>
+            <button type="button" onClick={() => { setShowSuccessModal(false); onNavigate?.("booking-saya"); }} className="w-full rounded-xl bg-emerald-400 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-500 cursor-pointer">Lihat Status Booking</button>
+            <button type="button" onClick={() => setShowSuccessModal(false)} className="w-full rounded-xl bg-slate-800 py-2 text-xs font-medium text-slate-300 transition hover:bg-slate-700 cursor-pointer">Tutup</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-export default JadwalPage;

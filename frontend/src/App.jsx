@@ -1,87 +1,132 @@
-import React, { useState, useEffect } from 'react';
-import HomePage from './pages/HomePage';
-import JadwalPage from './pages/JadwalPage';
-import BookingSayaPage from './pages/BookingSayaPage';
-import Auth from './pages/Auth';
-import Dashboard from './pages/Dashboard';
+import React, { useState } from "react";
+import Auth from "./pages/Auth";
+import HomePage from "./pages/HomePage";
+import JadwalPage from "./pages/JadwalPage";
+import BookingSayaPage from "./pages/BookingSayaPage";
+import Dashboard from "./pages/Dashboard";
 
-function App() {
-  const [user, setUser] = useState(null);
-  // Route default diset ke 'auth' (login) jika user belum terautentikasi
-  const [currentRoute, setCurrentRoute] = useState('auth'); 
+function readUser() {
+  try {
+    const saved = localStorage.getItem("user");
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    localStorage.removeItem("user");
+    return null;
+  }
+}
 
-  useEffect(() => {
-    // Cek apakah user sudah pernah login sebelumnya
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      try {
-        const parsedUser = JSON.parse(savedUser);
-        setUser(parsedUser);
-        // Jika admin, langsung ke dashboard; jika player, ke home
-        setCurrentRoute(parsedUser.role === 'admin' ? 'dashboard' : 'home');
-      } catch (e) {
-        console.error("Failed to parse user data", e);
-        setCurrentRoute('auth');
-      }
-    } else {
-      setCurrentRoute('auth'); // Jika belum, wajib login terlebih dahulu
+export default function App() {
+  const [user, setUser] = useState(readUser);
+
+  const [currentRoute, setCurrentRoute] = useState(() => {
+    const savedUser = readUser();
+    if (!savedUser) return "home";
+    return savedUser.role === "admin" ? "dashboard" : "home";
+  });
+
+  const [returnTo, setReturnTo] = useState("jadwal");
+
+  const handleNavigate = (route) => {
+    if (route === "home") {
+      setCurrentRoute("home");
+      return;
     }
-  }, []);
 
-  const handleLoginSuccess = (userData) => {
+    if (route === "jadwal") {
+      setCurrentRoute("jadwal");
+      return;
+    }
+
+    if (route === "booking-saya" || route === "booking") {
+      if (!user) {
+        setReturnTo("booking-saya");
+        setCurrentRoute("auth");
+        return;
+      }
+      setCurrentRoute("booking-saya");
+      return;
+    }
+
+    if (route === "dashboard") {
+      if (user?.role === "admin") {
+        setCurrentRoute("dashboard");
+      } else if (!user) {
+        setReturnTo("dashboard");
+        setCurrentRoute("auth");
+      } else {
+        // Jika player mencoba buka dashboard, arahkan ke home
+        setCurrentRoute("home");
+      }
+      return;
+    }
+
+    if (route === "auth") {
+      setCurrentRoute("auth");
+    }
+  };
+
+  const handleLogin = (userData) => {
+    localStorage.setItem("user", JSON.stringify(userData));
     setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    // Arahkan sesuai role setelah login
-    if (userData.role === 'admin') {
-      setCurrentRoute('dashboard');
+
+    if (userData.role === "admin") {
+      setCurrentRoute("dashboard");
     } else {
-      setCurrentRoute('home');
+      const destination = returnTo === "booking-saya" ? "booking-saya" : "jadwal";
+      setCurrentRoute(destination);
     }
   };
 
   const handleLogout = () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    localStorage.removeItem("userName");
+
     setUser(null);
-    localStorage.removeItem('user');
-    setCurrentRoute('auth'); // Saat logout, balik ke halaman login awal
+    setReturnTo("jadwal");
+    setCurrentRoute("home");
   };
 
-  const handleNavigate = (route) => {
-    // Proteksi rute: Jika belum login, paksa tetap di halaman auth
-    if (!user && route !== 'auth') {
-      setCurrentRoute('auth');
-      return;
-    }
-    setCurrentRoute(route);
-  };
-
-  // Jika belum login, tampilkan hanya Halaman Auth
-  if (!user || currentRoute === 'auth') {
-    return (
-      <div className="min-h-screen bg-[#070b19] text-white">
-        <Auth onLogin={handleLoginSuccess} onNavigate={handleNavigate} />
-      </div>
-    );
-  }
-
-  // Jika login sebagai Admin, tampilkan Dashboard Admin
-  if (user.role === 'admin') {
-    return <Dashboard user={user} onLogout={handleLogout} onNavigate={handleNavigate} />;
-  }
-
-  // Jika login sebagai Player, tampilkan website utama
   return (
-    <div className="min-h-screen bg-[#070b19] text-white">
-      {currentRoute === 'home' && (
-        <HomePage user={user} onLogout={handleLogout} onNavigate={handleNavigate} />
+    <div className="min-h-screen bg-slate-950 text-white font-sans antialiased">
+      {currentRoute === "home" && (
+        <HomePage
+          user={user}
+          onNavigate={handleNavigate}
+          onLogout={handleLogout}
+        />
       )}
-      {currentRoute === 'jadwal' && (
-        <JadwalPage user={user} onLogout={handleLogout} onNavigate={handleNavigate} />
+
+      {currentRoute === "auth" && (
+        <Auth
+          onLogin={handleLogin}
+          onNavigate={handleNavigate}
+        />
       )}
-      {currentRoute === 'booking' && (
-        <BookingSayaPage user={user} onLogout={handleLogout} onNavigate={handleNavigate} />
+
+      {currentRoute === "jadwal" && (
+        <JadwalPage
+          user={user}
+          onNavigate={handleNavigate}
+          onLogout={handleLogout}
+        />
+      )}
+
+      {currentRoute === "booking-saya" && (
+        <BookingSayaPage
+          user={user}
+          onNavigate={handleNavigate}
+          onLogout={handleLogout}
+        />
+      )}
+
+      {currentRoute === "dashboard" && user?.role === "admin" && (
+        <Dashboard
+          user={user}
+          onNavigate={handleNavigate}
+          onLogout={handleLogout}
+        />
       )}
     </div>
   );
 }
-
-export default App;

@@ -1,134 +1,154 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
-function Auth({ onLogin, onNavigate }) {
-  const [isRegister, setIsRegister] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'player' // default role: 'player' atau 'admin'
-  });
+export default function Auth({ onLogin, onNavigate }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  // FUNGSI UNTUK PILIH AKUN DEMO
+  const handleSelectDemo = (roleType) => {
+    if (roleType === "admin") {
+      setEmail("admin@futsalbook.id");
+      setPassword("admin123");
+      
+      // Langsung proses login sebagai Admin
+      const adminUser = {
+        id: "usr-admin",
+        name: "Administrator",
+        username: "admin",
+        email: "admin@futsalbook.id",
+        role: "admin", // PENTING: Role diset tegas ke admin
+      };
+      
+      onLogin(adminUser);
+    } else {
+      setEmail("player@futsalbook.id");
+      setPassword("player123");
+      
+      // Langsung proses login sebagai Player
+      const playerUser = {
+        id: "usr-player",
+        name: "Player Demo",
+        username: "player",
+        email: "player@futsalbook.id",
+        role: "player", // PENTING: Role diset tegas ke player
+      };
+
+      onLogin(playerUser);
+    }
   };
 
+  // FUNGSI SUBMIT FORM MANUAL
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // Simulasi data user yang login
+
+    const isAdmin = email.includes("admin");
     const userData = {
-      id: Date.now(),
-      name: formData.name || formData.email.split('@')[0],
-      email: formData.email,
-      role: formData.role // Bisa 'player' atau 'admin'
+      id: isAdmin ? "usr-admin" : `usr-${Date.now()}`,
+      name: isAdmin ? "Administrator" : email.split("@")[0],
+      username: email.split("@")[0],
+      email: email,
+      role: isAdmin ? "admin" : "player", // Memastikan role ditentukan berdasarkan email
     };
 
     onLogin(userData);
   };
 
   return (
-    <div className="min-h-screen bg-[#070b19] flex items-center justify-center px-4 relative">
-      {/* Tombol kembali ke Beranda (Hanya muncul jika fungsi onNavigate tersedia) */}
-      {onNavigate && (
-        <button 
+    <div className="min-h-screen bg-[#060814] flex items-center justify-center p-4 font-sans text-white">
+      <div className="w-full max-w-md bg-[#0b0f24] border border-slate-800 rounded-2xl p-8 shadow-2xl space-y-6">
+        {/* Tombol Kembali */}
+        <button
           type="button"
-          onClick={() => onNavigate('home')}
-          className="absolute top-6 left-6 text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1.5 bg-slate-900 px-4 py-2 rounded-xl border border-slate-800 transition"
+          onClick={() => onNavigate && onNavigate("home")}
+          className="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition cursor-pointer"
         >
-          <span>←</span> Kembali ke Beranda
+          ← Kembali ke Beranda
         </button>
-      )}
 
-      <div className="bg-slate-900/90 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-slate-800 backdrop-blur-md">
-        <div className="text-center mb-6">
-          <div className="w-12 h-12 rounded-xl bg-emerald-400 text-slate-950 font-bold flex items-center justify-center mx-auto mb-3 shadow-lg shadow-emerald-400/20">
-            ⚽
-          </div>
-          <h2 className="text-2xl font-black text-white tracking-tight">
-            Futsal<span className="text-emerald-400">Book</span>
-          </h2>
+        {/* Header Title */}
+        <div>
+          <p className="text-xs font-bold tracking-widest text-emerald-400 uppercase mb-1">
+            FUTSALBOOK
+          </p>
+          <h1 className="text-2xl font-extrabold tracking-tight">Selamat Datang!</h1>
           <p className="text-slate-400 text-xs mt-1">
-            {isRegister ? 'Daftar akun baru Kelompok 10' : 'Masuk untuk kelola jadwal & booking'}
+            Masuk untuk melanjutkan ke aplikasi.
           </p>
         </div>
 
+        {/* Form Login Manual */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {isRegister && (
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Nama Lengkap</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Masukkan nama lengkap"
-                className="w-full p-3 rounded-xl bg-slate-950 text-white border border-slate-800 focus:outline-none focus:border-emerald-400 text-sm transition"
-                required
-              />
-            </div>
-          )}
-
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Email</label>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              Email
+            </label>
             <input
               type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="nama@email.com"
-              className="w-full p-3 rounded-xl bg-slate-950 text-white border border-slate-800 focus:outline-none focus:border-emerald-400 text-sm transition"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Masukkan email"
               required
+              className="w-full bg-[#060814] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-400 transition"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Password</label>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              Password
+            </label>
             <input
               type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full p-3 rounded-xl bg-slate-950 text-white border border-slate-800 focus:outline-none focus:border-emerald-400 text-sm transition"
               required
+              className="w-full bg-[#060814] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-400 transition"
             />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Pilih Peran (Role)</label>
-            <select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              className="w-full p-3 rounded-xl bg-slate-950 text-white border border-slate-800 focus:outline-none focus:border-emerald-400 text-sm transition"
-            >
-              <option value="player">Player / Penyewa Lapangan</option>
-              <option value="admin">Admin / Pengelola Arena</option>
-            </select>
           </div>
 
           <button
             type="submit"
-            className="w-full py-3.5 bg-emerald-400 hover:bg-emerald-500 font-bold rounded-xl text-slate-950 transition shadow-lg shadow-emerald-400/20 text-sm mt-2"
+            className="w-full bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-bold py-3 rounded-xl transition text-sm cursor-pointer shadow-lg shadow-emerald-500/10"
           >
-            {isRegister ? 'Daftar Sekarang' : 'Masuk Sistem'}
+            Masuk
           </button>
         </form>
 
-        <div className="mt-6 text-center text-xs text-slate-400">
-          {isRegister ? 'Sudah punya akun?' : 'Belum punya akun?'}{' '}
-          <button
-            type="button"
-            onClick={() => setIsRegister(!isRegister)}
-            className="text-emerald-400 underline font-semibold ml-1"
-          >
-            {isRegister ? 'Masuk di sini' : 'Buat akun baru'}
-          </button>
+        {/* Pilihan Akun Demo */}
+        <div className="pt-4 border-t border-slate-800/80 space-y-3">
+          <p className="text-xs text-slate-400 font-semibold">Pilih akun demo</p>
+
+          <div className="space-y-2">
+            {/* Box Demo Admin */}
+            <div
+              onClick={() => handleSelectDemo("admin")}
+              className="p-3 bg-[#060814] border border-slate-800 hover:border-emerald-400/50 rounded-xl cursor-pointer transition group"
+            >
+              <p className="text-sm font-bold text-slate-200 group-hover:text-emerald-400">
+                Admin
+              </p>
+              <p className="text-xs text-slate-500 font-mono">
+                admin@futsalbook.id • admin123
+              </p>
+            </div>
+
+            {/* Box Demo Player */}
+            <div
+              onClick={() => handleSelectDemo("player")}
+              className="p-3 bg-[#060814] border border-slate-800 hover:border-emerald-400/50 rounded-xl cursor-pointer transition group"
+            >
+              <p className="text-sm font-bold text-emerald-400">Player</p>
+              <p className="text-xs text-slate-500 font-mono">
+                player@futsalbook.id • player123
+              </p>
+            </div>
+          </div>
         </div>
+
+        <p className="text-[10px] text-center text-slate-600">
+          Login demo frontend — belum terhubung ke backend.
+        </p>
       </div>
     </div>
   );
 }
-
-export default Auth;
