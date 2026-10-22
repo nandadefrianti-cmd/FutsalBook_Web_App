@@ -1,32 +1,23 @@
+import { useEffect, useState } from "react";
+import { getCourts } from "../services/slotService";
+import { rupiah } from "../lib/format";
 
-import React from "react";
+// Foto lapangan dicocokkan lewat nama. Nama, lantai, dan HARGA diambil dari database.
+const FOTO = {
+  "Lapangan A":
+    "https://i.pinimg.com/1200x/47/a1/35/47a135ace3bb63af9268b3dc450b5008.jpg",
+  "Lapangan B":
+    "https://i.pinimg.com/1200x/81/b6/3b/81b63bd45899d3951ce49dfbe95262ba.jpg",
+  "Lapangan C":
+    "https://i.pinimg.com/1200x/ad/03/65/ad03659eed8b847cf1b46679c7bfe8d3.jpg",
+};
+const FOTO_CADANGAN = FOTO["Lapangan A"];
 
-const courts = [
-  {
-    id: "A",
-    name: "Lapangan A",
-    description: "🔹 Vinyl - Indoor Standard",
-    price: "Rp100.000",
-    image:
-      "https://i.pinimg.com/1200x/47/a1/35/47a135ace3bb63af9268b3dc450b5008.jpg",
-  },
-  {
-    id: "B",
-    name: "Lapangan B",
-    description: "🔹 Vinyl - Turnamen Resmi",
-    price: "Rp100.000",
-    image:
-      "https://i.pinimg.com/1200x/81/b6/3b/81b63bd45899d3951ce49dfbe95262ba.jpg",
-  },
-  {
-    id: "C",
-    name: "Lapangan C",
-    description: "🌿 Rumput Sintetis",
-    price: "Rp80.000",
-    image:
-      "https://i.pinimg.com/1200x/ad/03/65/ad03659eed8b847cf1b46679c7bfe8d3.jpg",
-  },
-];
+// "Vinyl - Indoor Standard" / "Rumput Sintetis"
+const keterangan = (c) =>
+  (c.jenis_lantai.toLowerCase().includes("rumput") ? "🌿 " : "🔹 ") +
+  c.jenis_lantai +
+  (c.deskripsi ? " - " + c.deskripsi : "");
 
 export default function HomePage({
   user,
@@ -35,12 +26,36 @@ export default function HomePage({
 }) {
   const userName =
     user?.name || user?.username || user?.email || "";
+  const isAdmin = user?.role === "admin";
+
+  // Daftar lapangan + harga dari database (boleh dibaca tanpa login).
+  const [courts, setCourts] = useState([]);
+  const [memuat, setMemuat] = useState(true);
+  const [errorCourts, setErrorCourts] = useState("");
+
+  useEffect(() => {
+    let batal = false;
+    getCourts()
+      .then((data) => {
+        if (!batal) setCourts(data);
+      })
+      .catch((e) => {
+        if (!batal) setErrorCourts(e.message);
+      })
+      .finally(() => {
+        if (!batal) setMemuat(false);
+      });
+    return () => {
+      batal = true;
+    };
+  }, []);
 
   // Mengarahkan pengguna sesuai status login dan role.
   const startBooking = () => {
     if (!user) {
-      onNavigate?.("booking-start");
-    } else if (user.role === "admin") {
+      // App.jsx mengarahkan ke halaman masuk, lalu kembali ke Jadwal setelah login.
+      onNavigate?.("jadwal");
+    } else if (isAdmin) {
       onNavigate?.("dashboard");
     } else {
       onNavigate?.("jadwal");
@@ -92,7 +107,7 @@ export default function HomePage({
               Jadwal Lapangan
             </button>
 
-            {user?.role === "player" && (
+            {user && !isAdmin && (
               <button
                 type="button"
                 onClick={() => onNavigate?.("booking-saya")}
@@ -102,7 +117,7 @@ export default function HomePage({
               </button>
             )}
 
-            {user?.role === "admin" && (
+            {isAdmin && (
               <button
                 type="button"
                 onClick={() => onNavigate?.("dashboard")}
@@ -172,7 +187,7 @@ export default function HomePage({
             Jadwal Lapangan
           </button>
 
-          {user?.role === "player" && (
+          {user && !isAdmin && (
             <button
               type="button"
               onClick={() => onNavigate?.("booking-saya")}
@@ -182,7 +197,7 @@ export default function HomePage({
             </button>
           )}
 
-          {user?.role === "admin" && (
+          {isAdmin && (
             <button
               type="button"
               onClick={() => onNavigate?.("dashboard")}
@@ -230,7 +245,7 @@ export default function HomePage({
             onClick={startBooking}
             className="mt-7 rounded-xl bg-emerald-500 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-500/10 transition hover:bg-emerald-400"
           >
-            {user?.role === "admin"
+            {isAdmin
               ? "Buka Dashboard Admin →"
               : "Booking Lapangan Sekarang →"}
           </button>
@@ -248,6 +263,18 @@ export default function HomePage({
           </p>
         </div>
 
+        {memuat && (
+          <p className="text-sm text-slate-400">Memuat daftar lapangan...</p>
+        )}
+        {errorCourts && (
+          <p role="alert" className="text-sm text-rose-400">
+            {errorCourts}
+          </p>
+        )}
+        {!memuat && !errorCourts && courts.length === 0 && (
+          <p className="text-sm text-slate-400">Belum ada lapangan.</p>
+        )}
+
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {courts.map((court) => (
             <article
@@ -256,8 +283,8 @@ export default function HomePage({
             >
               <div className="relative h-48 overflow-hidden bg-slate-950">
                 <img
-                  src={court.image}
-                  alt={court.name}
+                  src={FOTO[court.nama_lapangan] || FOTO_CADANGAN}
+                  alt={court.nama_lapangan}
                   loading="lazy"
                   className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                 />
@@ -270,18 +297,21 @@ export default function HomePage({
               <div className="flex flex-grow flex-col justify-between p-5">
                 <div>
                   <h3 className="mb-1 text-lg font-bold">
-                    {court.name}
+                    {court.nama_lapangan}
                   </h3>
                   <p className="mb-4 text-xs text-slate-400">
-                    {court.description}
+                    {keterangan(court)}
                   </p>
                 </div>
 
                 <div className="flex items-center justify-between gap-3 border-t border-slate-800/80 pt-3">
                   <span className="text-sm font-bold text-emerald-400">
-                    {court.price}
+                    {rupiah(court.harga_weekday)}
                     <span className="text-xs font-normal text-slate-400">
                       /jam
+                    </span>
+                    <span className="block text-[11px] font-normal text-slate-400">
+                      Sab-Min {rupiah(court.harga_weekend)}/jam
                     </span>
                   </span>
 
@@ -331,11 +361,11 @@ export default function HomePage({
               2
             </div>
             <h3 className="mb-1 text-base font-bold">
-              Upload Bukti Bayar
+              Bayar (Simulasi)
             </h3>
             <p className="text-xs leading-5 text-slate-400">
-              Ikuti proses pembayaran dan unggah bukti pembayaran jika fitur
-              tersebut sudah tersedia.
+              Pilih metode QRIS atau DANA. Pembayaran pada aplikasi ini
+              disimulasikan, tidak ada uang yang diproses.
             </p>
           </div>
 
