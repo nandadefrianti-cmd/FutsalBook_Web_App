@@ -1,11 +1,20 @@
-BEGIN;
--- Menggunakan hitung_harga agar otomatis menyesuaikan tarif hari (Weekday/Weekend)
-INSERT INTO bookings (user_id, court_id, tanggal, jam_mulai, jam_selesai, nama_pemesan, no_telp, metode_bayar, total_harga)
-VALUES ((SELECT id FROM profiles LIMIT 1), 1, CURRENT_DATE + 1, '19:00', '20:00', 'Demo', '081200000000', 'QRIS', hitung_harga(1, CURRENT_DATE + 1));
+-- =====================================================================
+-- FutsalBook - database/demo_ik301.sql
+-- BUKAN bagian instalasi. Bahan DEMO IK301: transaksi, trigger, index (EXPLAIN), laporan.
+-- Jalankan per BAGIAN, jangan sekaligus. Syarat: 01..05 sudah dijalankan dan
+-- minimal 1 akun sudah punya profil.
+-- =====================================================================
 
+-- BAGIAN A. TRANSAKSI + ROLLBACK
+-- Slot yang sama dipesan 2 kali -> kedua melanggar uq_slot_aktif -> error -> ROLLBACK.
+-- Jalankan A1+A2+A3 SEKALIGUS. Eksekusi berhenti di A2 dengan error (itu yang ditunjukkan), lalu jalankan A4.
+-- A1
+BEGIN;
+INSERT INTO bookings (user_id, court_id, tanggal, jam_mulai, jam_selesai, nama_pemesan, no_telp, metode_bayar, total_harga)
+VALUES ((SELECT id FROM profiles LIMIT 1), 1, CURRENT_DATE + 1, '19:00', '20:00', 'Demo', '081200000000', 'QRIS', 150000);
 -- A2 (ERROR: duplicate key value violates unique constraint "uq_slot_aktif")
 INSERT INTO bookings (user_id, court_id, tanggal, jam_mulai, jam_selesai, nama_pemesan, no_telp, metode_bayar, total_harga)
-VALUES ((SELECT id FROM profiles LIMIT 1), 1, CURRENT_DATE + 1, '19:00', '20:00', 'Demo', '081200000000', 'QRIS', hitung_harga(1, CURRENT_DATE + 1));
+VALUES ((SELECT id FROM profiles LIMIT 1), 1, CURRENT_DATE + 1, '19:00', '20:00', 'Demo', '081200000000', 'QRIS', 150000);
 -- A3
 ROLLBACK;
 -- A4 (harus 0 baris)
@@ -15,10 +24,9 @@ SELECT * FROM bookings WHERE court_id = 1 AND tanggal = CURRENT_DATE + 1 AND jam
 SELECT waktu, booking_id, status_lama, status_baru FROM booking_logs ORDER BY waktu DESC LIMIT 10;
 
 -- BAGIAN C. DATA DUMMY BESAR untuk demo index (~32.000 baris, tanggal lampau)
--- Menggunakan hitung_harga(c.id, d::DATE) agar harga sesuai hari di tanggal tersebut
 INSERT INTO bookings (user_id, court_id, tanggal, jam_mulai, jam_selesai, nama_pemesan, no_telp, metode_bayar, status, total_harga)
 SELECT (SELECT id FROM profiles LIMIT 1), c.id, d::DATE,
-       make_time(h, 0, 0), make_time(h + 1, 0, 0), 'Dummy', '081200000000', 'QRIS', 'lunas', hitung_harga(c.id, d::DATE)
+       make_time(h, 0, 0), make_time(h + 1, 0, 0), 'Dummy', '081200000000', 'QRIS', 'lunas', 100000
 FROM courts c,
      generate_series(CURRENT_DATE - 800, CURRENT_DATE - 70, INTERVAL '1 day') AS d,
      generate_series(8, 22) AS h;

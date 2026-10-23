@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 
+// Nilai dibaca dari frontend/.env (JANGAN di-commit).
+// JANGAN PERNAH memakai Secret key / service_role di frontend.
 const url = import.meta.env.VITE_SUPABASE_URL
 const key =
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||

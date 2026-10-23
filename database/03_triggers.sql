@@ -1,3 +1,8 @@
+-- =====================================================================
+-- FutsalBook - database/03_triggers.sql
+-- =====================================================================
+
+-- 1. Audit status booking: mencatat saat dibuat (status_lama NULL) dan setiap perubahan status.
 CREATE OR REPLACE FUNCTION log_booking_status_change()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -17,6 +22,9 @@ AFTER INSERT OR UPDATE OF status ON bookings
 FOR EACH ROW
 EXECUTE FUNCTION log_booking_status_change();
 
+-- 2. Saat pengguna mendaftar di Supabase Auth, otomatis buat baris profiles (role pemain).
+--    Frontend: supabase.auth.signUp({ email, password, options: { data: { nama, no_telp } } })
+--    Nomor tidak valid diabaikan (pendaftaran tidak digagalkan). Nama terlalu pendek diganti 'Pemain'.
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE

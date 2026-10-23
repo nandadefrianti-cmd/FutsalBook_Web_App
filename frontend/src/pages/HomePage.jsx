@@ -364,7 +364,7 @@ export default function HomePage({
               Bayar (Simulasi)
             </h3>
             <p className="text-xs leading-5 text-slate-400">
-              Pilih metode QRIS atau DANA. Pembayaran pada aplikasi ini
+              Pilih metode QRIS, GoPay, DANA, atau OVO. Pembayaran pada aplikasi ini
               disimulasikan, tidak ada uang yang diproses.
             </p>
           </div>
