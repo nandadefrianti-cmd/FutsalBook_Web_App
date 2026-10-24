@@ -1,5 +1,5 @@
 UPDATE profiles SET role = 'admin'
-WHERE id = (SELECT id FROM auth.users WHERE email = 'salwahasnafadhila@gmail.com');
+WHERE id = (SELECT id FROM auth.users WHERE email = 'GANTI_DENGAN_EMAIL_ADMIN');
 
 -- Cek: harus menampilkan 1 baris dengan role = admin
 SELECT p.nama, p.role, u.email
