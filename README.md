@@ -60,8 +60,6 @@ Then start the Vite dev server:
 npm run dev
 ```
 
-Open http://localhost:5173. (`.env` is git-ignored; never commit it and never put the secret key in frontend code.)
-
 ## Step 3: Create the accounts and try the app
 
 There are no built-in accounts and no password is stored in this repository. Ready-made evaluator accounts for the hosted demo are listed in the README document submitted through the LMS.
@@ -130,15 +128,6 @@ In compliance with Section 7 of the exam brief, generative AI tools were used:
 - **Gemini:** ideas, explanations of technical concepts and suggestions.
 - **ChatGPT:** Tailwind CSS UI components, early drafts of RLS policies and Vitest boilerplate.
 - **Claude (Anthropic):** the final database SQL (schema, functions, triggers, RLS, seed), the frontend service layer and admin pages, the Vitest tests, adapting the existing UI to the database, debugging, and drafting the READMEs.
-
-The team chose the idea and users, ran the validation, decided the features and UI, ran every SQL file and tested the full flow in the browser. All AI-generated code was run and tested; anything the team cannot explain is not claimed as its own work.
-
-# Team
-
-| Member | Contribution |
-|---|---|
-| [FILL IN NAME] | [FILL IN] |
-| [FILL IN NAME] | [FILL IN] |
 
 # Learn More
 
